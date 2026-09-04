@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -39,15 +38,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
@@ -58,7 +54,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -98,7 +93,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.leeauf.pocketnfc.R
 import com.leeauf.pocketnfc.model.NfcItem
 import com.leeauf.pocketnfc.util.UrlUtils
-import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -123,37 +117,16 @@ fun NfcPocketApp(
     val allItems by viewModel.items.collectAsStateWithLifecycle()
     val activeItem by viewModel.activeItem.collectAsStateWithLifecycle()
     val readCount by viewModel.readCount.collectAsStateWithLifecycle()
-    val sessionStartedAt by viewModel.sessionStartedAt.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val snackbarHost = remember { SnackbarHostState() }
     var screen by rememberSaveable { mutableStateOf(Screen.HOME) }
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
     var draftUrl by rememberSaveable { mutableStateOf("") }
     val editingItem = allItems.firstOrNull { it.id == editingId }
-    val appPreferences = remember { context.getSharedPreferences("app_preferences", Context.MODE_PRIVATE) }
-    var showOnboarding by rememberSaveable {
-        mutableStateOf(!appPreferences.getBoolean("onboarding_complete", false))
-    }
-
     fun openEditor(item: NfcItem? = null, initialUrl: String = "") {
         editingId = item?.id
         draftUrl = initialUrl
         screen = Screen.EDITOR
-    }
-
-    fun pasteIntoEditor() {
-        val pasted = clipboardText(context)
-        val url = pasted?.let(UrlUtils::extract)
-        if (url == null) {
-            viewModel.showMessage("Le presse-papiers ne contient pas d’URL valide")
-        } else {
-            openEditor(initialUrl = url)
-        }
-    }
-
-    fun finishOnboarding() {
-        appPreferences.edit().putBoolean("onboarding_complete", true).apply()
-        showOnboarding = false
     }
 
     LaunchedEffect(shareGeneration) {
@@ -181,15 +154,11 @@ fun NfcPocketApp(
                 item = activeItem!!,
                 nfcStatus = nfcStatus,
                 readCount = readCount,
-                sessionStartedAt = sessionStartedAt,
                 onOpenNfcSettings = onOpenNfcSettings,
                 onCopy = {
                     copyUrl(context, activeItem!!.url)
                     viewModel.showMessage("URL copiée")
                 },
-                onShare = { shareUrl(context, activeItem!!.url, viewModel::showMessage) },
-                onOpen = { openUrl(context, activeItem!!.url, viewModel::showMessage) },
-                onRestart = viewModel::restartEmulation,
                 onStop = viewModel::stopEmulation
             )
             screen == Screen.EDITOR -> EditorScreen(
@@ -205,7 +174,6 @@ fun NfcPocketApp(
                 nfcStatus = nfcStatus,
                 onOpenNfcSettings = onOpenNfcSettings,
                 onCreate = { openEditor() },
-                onPaste = ::pasteIntoEditor,
                 onEdit = { openEditor(it) },
                 onDelete = viewModel::delete,
                 onFavorite = viewModel::toggleFavorite,
@@ -225,9 +193,6 @@ fun NfcPocketApp(
         )
     }
 
-    if (showOnboarding && activeItem == null && shareGeneration == 0) {
-        OnboardingDialog(onComplete = ::finishOnboarding)
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -237,7 +202,6 @@ private fun HomeScreen(
     nfcStatus: NfcStatus,
     onOpenNfcSettings: () -> Unit,
     onCreate: () -> Unit,
-    onPaste: () -> Unit,
     onEdit: (NfcItem) -> Unit,
     onDelete: (NfcItem) -> Unit,
     onFavorite: (NfcItem) -> Unit,
@@ -250,7 +214,6 @@ private fun HomeScreen(
     var search by rememberSaveable { mutableStateOf("") }
     var pendingDelete by remember { mutableStateOf<NfcItem?>(null) }
     val sorted = items.sortedByDescending { it.lastUsedAt ?: it.createdAt }
-    val lastItem = sorted.firstOrNull()
     val matching = sorted.filter {
         search.isBlank() || it.title.contains(search, true) || it.url.contains(search, true)
     }
@@ -270,43 +233,30 @@ private fun HomeScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(bottom = 104.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item {
-                Column(
-                    Modifier.padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+                Box(Modifier.padding(horizontal = 16.dp)) {
                     NfcStatusCard(nfcStatus, onOpenNfcSettings)
-                    QuickStartCard(onCreate = onCreate, onPaste = onPaste)
                 }
             }
-            if (lastItem != null) {
-                item {
-                    Column(Modifier.padding(horizontal = 16.dp)) {
-                        SectionTitle("Dernière URL")
-                        Spacer(Modifier.height(8.dp))
-                        LastUsedCard(lastItem, onEmulate)
-                    }
-                }
-            }
-            if (items.isNotEmpty()) {
+            if (items.size >= 4) {
                 item {
                     OutlinedTextField(
                         value = search,
                         onValueChange = { search = it },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                        label = { Text("Rechercher") },
+                        placeholder = { Text("Rechercher") },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         trailingIcon = if (search.isNotEmpty()) {
-                            { IconButton(onClick = { search = "" }) { Icon(Icons.Default.Close, "Effacer la recherche") } }
+                            { IconButton(onClick = { search = "" }) { Icon(Icons.Default.Close, "Effacer") } }
                         } else null,
                         singleLine = true
                     )
                 }
             }
             if (favorites.isNotEmpty()) {
-                item { SectionTitle("Favoris", Modifier.padding(horizontal = 16.dp)) }
+                item { SectionTitle("Favoris", Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) }
                 item {
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 16.dp),
@@ -316,6 +266,7 @@ private fun HomeScreen(
                             FavoriteCard(
                                 item = item,
                                 onEdit = onEdit,
+                                onDelete = { pendingDelete = it },
                                 onFavorite = onFavorite,
                                 onEmulate = onEmulate,
                                 onCopy = onCopy,
@@ -327,7 +278,7 @@ private fun HomeScreen(
                     }
                 }
             }
-            item { SectionTitle("Récents", Modifier.padding(horizontal = 16.dp)) }
+            item { SectionTitle("Historique", Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) }
             if (recent.isEmpty()) {
                 item {
                     EmptyHistory(
@@ -378,106 +329,31 @@ private fun HomeScreen(
 }
 
 @Composable
-private fun QuickStartCard(onCreate: () -> Unit, onPaste: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-    ) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary) {
-                    Icon(
-                        painterResource(R.drawable.ic_nfc_material),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.padding(12.dp).size(30.dp)
-                    )
-                }
-                Spacer(Modifier.width(14.dp))
-                Column {
-                    Text("Émuler une URL", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text("Créez un lien ou collez-le directement.", color = MaterialTheme.colorScheme.onPrimaryContainer)
-                }
-            }
-            Button(onClick = onCreate, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Nouvelle URL")
-            }
-            OutlinedButton(onClick = onPaste, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                Icon(painterResource(R.drawable.ic_content_paste), contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Coller depuis le presse-papiers")
-            }
-        }
-    }
-}
-
-@Composable
-private fun LastUsedCard(item: NfcItem, onEmulate: (NfcItem) -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable { onEmulate(item) },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-    ) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(painterResource(R.drawable.ic_nfc_material), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(item.title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(
-                    UrlUtils.defaultTitle(item.url),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            FilledTonalButton(onClick = { onEmulate(item) }) {
-                Icon(Icons.Default.PlayArrow, contentDescription = null)
-                Spacer(Modifier.width(4.dp))
-                Text("Émuler")
-            }
-        }
-    }
-}
-
-@Composable
 private fun NfcStatusCard(status: NfcStatus, onOpenSettings: () -> Unit) {
     val available = status == NfcStatus.AVAILABLE
     val label = when (status) {
         NfcStatus.AVAILABLE -> "NFC prêt"
         NfcStatus.DISABLED -> "NFC désactivé"
-        NfcStatus.HCE_UNSUPPORTED -> "Émulation NFC non compatible"
+        NfcStatus.HCE_UNSUPPORTED -> "HCE non compatible"
         NfcStatus.UNAVAILABLE -> "NFC indisponible"
     }
-    val detail = when (status) {
-        NfcStatus.AVAILABLE -> "Votre téléphone peut partager une URL"
-        NfcStatus.DISABLED -> "Activez le NFC avant de rapprocher les téléphones"
-        NfcStatus.HCE_UNSUPPORTED -> "Ce modèle ne prend pas en charge Android HCE"
-        NfcStatus.UNAVAILABLE -> "Aucun matériel NFC n’a été détecté"
-    }
-    Card(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (available) MaterialTheme.colorScheme.secondaryContainer
-            else MaterialTheme.colorScheme.errorContainer
-        )
+        shape = RoundedCornerShape(14.dp),
+        color = if (available) MaterialTheme.colorScheme.secondaryContainer
+        else MaterialTheme.colorScheme.errorContainer
     ) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(12.dp).background(
+                Modifier.size(10.dp).background(
                     if (available) Color(0xFF16865A) else MaterialTheme.colorScheme.error,
                     CircleShape
                 )
             )
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(label, fontWeight = FontWeight.SemiBold)
-                Text(detail, style = MaterialTheme.typography.bodySmall)
-            }
+            Spacer(Modifier.width(10.dp))
+            Text(label, modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
             if (status == NfcStatus.DISABLED) {
-                IconButton(onClick = onOpenSettings) {
-                    Icon(Icons.Default.Settings, contentDescription = "Ouvrir les paramètres NFC")
-                }
+                TextButton(onClick = onOpenSettings) { Text("Activer") }
             }
         }
     }
@@ -485,13 +361,14 @@ private fun NfcStatusCard(status: NfcStatus, onOpenSettings: () -> Unit) {
 
 @Composable
 private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
-    Text(text, modifier, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+    Text(text, modifier, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
 }
 
 @Composable
 private fun FavoriteCard(
     item: NfcItem,
     onEdit: (NfcItem) -> Unit,
+    onDelete: (NfcItem) -> Unit,
     onFavorite: (NfcItem) -> Unit,
     onEmulate: (NfcItem) -> Unit,
     onCopy: (NfcItem) -> Unit,
@@ -500,27 +377,23 @@ private fun FavoriteCard(
     onDuplicate: (NfcItem) -> Unit
 ) {
     Card(
-        modifier = Modifier.width(236.dp).clickable { onEmulate(item) },
+        modifier = Modifier.width(250.dp).clickable { onEmulate(item) },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
     ) {
-        Column(Modifier.padding(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFB300))
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    item.title,
-                    modifier = Modifier.weight(1f),
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                ItemMenu(item, onCopy, onShare, onOpen, onDuplicate)
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Favicon(item.url, size = 42.dp)
+            Spacer(Modifier.width(11.dp))
+            Text(
+                item.title,
+                modifier = Modifier.weight(1f),
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            IconButton(onClick = { onFavorite(item) }) {
+                Icon(Icons.Default.Star, contentDescription = "Retirer des favoris", tint = Color(0xFFFFB300))
             }
-            Row(Modifier.align(Alignment.End), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { onEdit(item) }) { Icon(Icons.Default.Edit, "Modifier") }
-                IconButton(onClick = { onFavorite(item) }) { Icon(Icons.Default.Close, "Retirer des favoris") }
-                IconButton(onClick = { onEmulate(item) }) { Icon(Icons.Default.PlayArrow, "Émuler") }
-            }
+            ItemMenu(item, onEdit, onDelete, onCopy, onShare, onOpen, onDuplicate)
         }
     }
 }
@@ -541,36 +414,32 @@ private fun LinkCard(
         modifier = Modifier.fillMaxWidth().clickable { onEmulate(item) },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.Top) {
-                Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = RoundedCornerShape(8.dp)) {
-                    Text("URL", Modifier.padding(horizontal = 10.dp, vertical = 5.dp), style = MaterialTheme.typography.labelMedium)
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(item.title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(item.url, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                }
-                IconButton(onClick = { onFavorite(item) }) {
-                    Icon(Icons.Default.Star, "Ajouter aux favoris", tint = MaterialTheme.colorScheme.outline)
-                }
-                ItemMenu(item, onCopy, onShare, onOpen, onDuplicate)
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Favicon(item.url)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(item.title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    item.lastUsedAt?.let { "Utilisé ${formatDate(it)}" } ?: "Jamais utilisé",
-                    style = MaterialTheme.typography.labelMedium,
+                    UrlUtils.defaultTitle(item.url),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f)
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                IconButton(onClick = { onEdit(item) }) { Icon(Icons.Default.Edit, "Modifier") }
-                IconButton(onClick = { onDelete(item) }) { Icon(Icons.Default.Delete, "Supprimer") }
-                FilledTonalButton(onClick = { onEmulate(item) }) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = null)
-                    Spacer(Modifier.width(4.dp))
-                    Text("Émuler")
-                }
+                Text(
+                    item.lastUsedAt?.let(::formatDate) ?: "Jamais utilisé",
+                    color = MaterialTheme.colorScheme.outline,
+                    style = MaterialTheme.typography.labelSmall
+                )
             }
+            IconButton(onClick = { onFavorite(item) }) {
+                Icon(
+                    Icons.Default.Star,
+                    contentDescription = "Ajouter aux favoris",
+                    tint = MaterialTheme.colorScheme.outline
+                )
+            }
+            ItemMenu(item, onEdit, onDelete, onCopy, onShare, onOpen, onDuplicate)
         }
     }
 }
@@ -578,6 +447,8 @@ private fun LinkCard(
 @Composable
 private fun ItemMenu(
     item: NfcItem,
+    onEdit: (NfcItem) -> Unit,
+    onDelete: (NfcItem) -> Unit,
     onCopy: (NfcItem) -> Unit,
     onShare: (NfcItem) -> Unit,
     onOpen: (NfcItem) -> Unit,
@@ -590,7 +461,12 @@ private fun ItemMenu(
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
-                text = { Text("Copier l’URL") },
+                text = { Text("Modifier") },
+                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                onClick = { expanded = false; onEdit(item) }
+            )
+            DropdownMenuItem(
+                text = { Text("Copier") },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_content_copy), contentDescription = null) },
                 onClick = { expanded = false; onCopy(item) }
             )
@@ -608,6 +484,11 @@ private fun ItemMenu(
                 text = { Text("Dupliquer") },
                 leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
                 onClick = { expanded = false; onDuplicate(item) }
+            )
+            DropdownMenuItem(
+                text = { Text("Supprimer") },
+                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
+                onClick = { expanded = false; onDelete(item) }
             )
         }
     }
@@ -679,13 +560,11 @@ private fun EditorScreen(
     var title by rememberSaveable(original?.id) { mutableStateOf(original?.title.orEmpty()) }
     var url by rememberSaveable(original?.id, initialUrl) { mutableStateOf(original?.url ?: initialUrl) }
     var error by remember { mutableStateOf<String?>(null) }
-    val normalizedPreview = UrlUtils.normalize(url)
 
     fun paste() {
-        val pasted = onReadClipboard()
-        val extracted = pasted?.let(UrlUtils::extract)
+        val extracted = onReadClipboard()?.let(UrlUtils::extract)
         if (extracted == null) {
-            error = "Le presse-papiers ne contient pas d’URL web valide."
+            error = "Aucune URL valide dans le presse-papiers."
         } else {
             url = extracted
             if (title.isBlank()) title = UrlUtils.defaultTitle(extracted)
@@ -696,10 +575,9 @@ private fun EditorScreen(
     fun buildItem(): NfcItem? {
         val cleanUrl = UrlUtils.normalize(url)
         if (cleanUrl == null) {
-            error = "Saisissez une adresse web valide, par exemple example.com."
+            error = "Adresse web invalide."
             return null
         }
-        url = cleanUrl
         return NfcItem(
             id = original?.id ?: UUID.randomUUID().toString(),
             title = title.trim().ifBlank { UrlUtils.defaultTitle(cleanUrl) },
@@ -713,7 +591,7 @@ private fun EditorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (original == null) "Nouvelle URL" else "Modifier le lien") },
+                title = { Text(if (original == null) "Nouvelle URL" else "Modifier") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
@@ -724,14 +602,8 @@ private fun EditorScreen(
     ) { padding ->
         Column(
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text("Collez une adresse ou saisissez-la. NFC Pocket ajoutera https:// si nécessaire.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedButton(onClick = ::paste, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                Icon(painterResource(R.drawable.ic_content_paste), contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Coller une URL")
-            }
             OutlinedTextField(
                 value = url,
                 onValueChange = { url = it; error = null },
@@ -739,6 +611,11 @@ private fun EditorScreen(
                 label = { Text("URL") },
                 placeholder = { Text("example.com") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                trailingIcon = {
+                    IconButton(onClick = ::paste) {
+                        Icon(painterResource(R.drawable.ic_content_paste), contentDescription = "Coller")
+                    }
+                },
                 isError = error != null,
                 supportingText = error?.let { message -> { Text(message) } },
                 singleLine = true
@@ -748,36 +625,21 @@ private fun EditorScreen(
                 onValueChange = { title = it },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Nom (optionnel)") },
-                placeholder = { Text(normalizedPreview?.let(UrlUtils::defaultTitle) ?: "Mon lien") },
                 singleLine = true
             )
-            if (normalizedPreview != null) {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-                    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(10.dp))
-                        Column {
-                            Text("URL valide", fontWeight = FontWeight.SemiBold)
-                            Text(normalizedPreview, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                }
+            Spacer(Modifier.height(2.dp))
+            Button(
+                onClick = { buildItem()?.let(onEmulate) },
+                modifier = Modifier.fillMaxWidth().height(54.dp)
+            ) {
+                Icon(Icons.Default.PlayArrow, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
+                Text("Émuler")
             }
-            Spacer(Modifier.height(4.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(
-                    onClick = { buildItem()?.let(onSave) },
-                    modifier = Modifier.weight(1f).height(54.dp)
-                ) { Text("Enregistrer") }
-                Button(
-                    onClick = { buildItem()?.let(onEmulate) },
-                    modifier = Modifier.weight(1f).height(54.dp)
-                ) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = null)
-                    Spacer(Modifier.width(4.dp))
-                    Text("Émuler")
-                }
-            }
+            TextButton(
+                onClick = { buildItem()?.let(onSave) },
+                modifier = Modifier.fillMaxWidth().height(48.dp)
+            ) { Text("Enregistrer sans émuler") }
         }
     }
 }
@@ -787,35 +649,23 @@ private fun EmulationScreen(
     item: NfcItem,
     nfcStatus: NfcStatus,
     readCount: Int,
-    sessionStartedAt: Long,
     onOpenNfcSettings: () -> Unit,
     onCopy: () -> Unit,
-    onShare: () -> Unit,
-    onOpen: () -> Unit,
-    onRestart: () -> Unit,
     onStop: () -> Unit
 ) {
     val available = nfcStatus == NfcStatus.AVAILABLE
-    var showHelp by remember(sessionStartedAt) { mutableStateOf(false) }
-    LaunchedEffect(sessionStartedAt, readCount, available) {
-        showHelp = false
-        if (available && readCount == 0) {
-            delay(10_000)
-            showHelp = true
-        }
-    }
     val pulse = rememberInfiniteTransition(label = "NFC active")
     val pulseScale by pulse.animateFloat(
-        initialValue = 0.88f,
-        targetValue = 1.12f,
+        initialValue = 0.9f,
+        targetValue = 1.1f,
         animationSpec = infiniteRepeatable(tween(1_300, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "NFC pulse scale"
+        label = "NFC pulse"
     )
     val pulseAlpha by pulse.animateFloat(
-        initialValue = 0.38f,
-        targetValue = 0.08f,
+        initialValue = 0.32f,
+        targetValue = 0.06f,
         animationSpec = infiniteRepeatable(tween(1_300, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "NFC pulse alpha"
+        label = "NFC glow"
     )
 
     Scaffold { padding ->
@@ -823,11 +673,11 @@ private fun EmulationScreen(
             modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(12.dp))
-            Box(Modifier.size(190.dp), contentAlignment = Alignment.Center) {
+            Spacer(Modifier.height(24.dp))
+            Box(Modifier.size(180.dp), contentAlignment = Alignment.Center) {
                 if (available) {
                     Surface(
-                        modifier = Modifier.size(168.dp).graphicsLayer {
+                        modifier = Modifier.size(158.dp).graphicsLayer {
                             scaleX = pulseScale
                             scaleY = pulseScale
                         }.alpha(pulseAlpha),
@@ -836,173 +686,84 @@ private fun EmulationScreen(
                     ) {}
                 }
                 Surface(
-                    modifier = Modifier.size(146.dp),
+                    modifier = Modifier.size(138.dp),
                     shape = CircleShape,
                     color = if (available) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_nfc_material),
                         contentDescription = "Émulation NFC active",
-                        modifier = Modifier.fillMaxSize().padding(34.dp),
+                        modifier = Modifier.fillMaxSize().padding(32.dp),
                         tint = if (available) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                     )
                 }
             }
             Spacer(Modifier.height(18.dp))
             Text(
-                if (readCount > 0) "URL lue !" else "Approchez un autre téléphone",
+                if (readCount > 0) "Contenu lu" else "Approchez un autre téléphone",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
                 when (nfcStatus) {
-                    NfcStatus.AVAILABLE -> if (readCount > 0) {
-                        if (readCount == 1) "1 lecture détectée" else "$readCount lectures détectées"
-                    } else "Prêt à être lu · actif depuis ${formatTime(sessionStartedAt)}"
-                    NfcStatus.DISABLED -> "Le NFC doit être activé"
-                    NfcStatus.HCE_UNSUPPORTED -> "Ce téléphone ne prend pas en charge HCE"
-                    NfcStatus.UNAVAILABLE -> "Aucun matériel NFC détecté"
+                    NfcStatus.AVAILABLE -> when (readCount) {
+                        0 -> "Émulation active"
+                        1 -> "1 lecture"
+                        else -> "$readCount lectures"
+                    }
+                    NfcStatus.DISABLED -> "NFC désactivé"
+                    NfcStatus.HCE_UNSUPPORTED -> "HCE non compatible"
+                    NfcStatus.UNAVAILABLE -> "NFC indisponible"
                 },
                 color = if (available) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center
+                fontWeight = FontWeight.SemiBold
             )
-            Spacer(Modifier.height(20.dp))
-            AnimatedVisibility(readCount > 0) {
-                Card(
-                    Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-                ) {
-                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF16865A))
-                        Spacer(Modifier.width(12.dp))
-                        Column {
-                            Text("Contenu lu", fontWeight = FontWeight.Bold)
-                            Text("Vous pouvez laisser l’écran ouvert pour un autre téléphone.")
-                        }
-                    }
-                }
-            }
-            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
-                Column(Modifier.padding(18.dp)) {
-                    Text(item.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(4.dp))
-                    Text(item.url, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 4, overflow = TextOverflow.Ellipsis)
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                QuickPainterAction(painterResource(R.drawable.ic_content_copy), "Copier", onCopy, Modifier.weight(1f))
-                QuickAction(Icons.Default.Share, "Partager", onShare, Modifier.weight(1f))
-                QuickPainterAction(painterResource(R.drawable.ic_open_in_new), "Ouvrir", onOpen, Modifier.weight(1f))
-            }
-            AnimatedVisibility(showHelp && readCount == 0) {
-                Card(
-                    Modifier.fillMaxWidth().padding(top = 12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
-                ) {
-                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.Top) {
-                        Icon(Icons.Default.Info, contentDescription = null)
-                        Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.height(24.dp))
+            Card(
+                Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+            ) {
+                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Favicon(item.url)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(item.title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(
-                            "Aucune lecture détectée. Déverrouillez l’autre téléphone et déplacez lentement sa zone NFC près du haut ou de l’appareil photo de ce téléphone.",
-                            style = MaterialTheme.typography.bodySmall
+                            item.url,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
+                    IconButton(onClick = onCopy) {
+                        Icon(painterResource(R.drawable.ic_content_copy), contentDescription = "Copier l’URL")
+                    }
                 }
             }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(14.dp))
+            Text(
+                "Déverrouillez l’autre téléphone et rapprochez les zones NFC.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(24.dp))
             if (nfcStatus == NfcStatus.DISABLED) {
-                OutlinedButton(onClick = onOpenNfcSettings, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                    Icon(Icons.Default.Settings, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
+                OutlinedButton(onClick = onOpenNfcSettings, modifier = Modifier.fillMaxWidth().height(50.dp)) {
                     Text("Activer le NFC")
                 }
                 Spacer(Modifier.height(10.dp))
             }
-            if (readCount > 0 && available) {
-                OutlinedButton(onClick = onRestart, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Nouvelle session")
-                }
-                Spacer(Modifier.height(10.dp))
-            }
-            Button(onClick = onStop, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+            Button(onClick = onStop, modifier = Modifier.fillMaxWidth().height(54.dp)) {
                 Icon(Icons.Default.Close, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text("Arrêter")
             }
-            Spacer(Modifier.height(16.dp))
         }
     }
-}
-
-@Composable
-private fun QuickAction(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    OutlinedButton(onClick = onClick, modifier = modifier.height(52.dp), contentPadding = PaddingValues(horizontal = 6.dp)) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(5.dp))
-        Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
-    }
-}
-
-@Composable
-private fun QuickPainterAction(
-    painter: androidx.compose.ui.graphics.painter.Painter,
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    OutlinedButton(onClick = onClick, modifier = modifier.height(52.dp), contentPadding = PaddingValues(horizontal = 6.dp)) {
-        Icon(painter, contentDescription = null, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(5.dp))
-        Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
-    }
-}
-
-@Composable
-private fun OnboardingDialog(onComplete: () -> Unit) {
-    var step by rememberSaveable { mutableStateOf(0) }
-    val titles = listOf("Ajoutez une URL", "Lancez l’émulation", "Rapprochez les téléphones")
-    val descriptions = listOf(
-        "Collez une adresse, saisissez-la ou partagez une page depuis votre navigateur.",
-        "Appuyez sur Émuler. NFC Pocket prépare alors un tag NDEF temporaire.",
-        "Déverrouillez l’autre téléphone et placez les zones NFC l’une contre l’autre."
-    )
-    AlertDialog(
-        onDismissRequest = onComplete,
-        icon = {
-            if (step == 1) {
-                Icon(painterResource(R.drawable.ic_nfc_material), contentDescription = null, modifier = Modifier.size(40.dp))
-            } else {
-                Icon(if (step == 0) Icons.Default.Add else Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(40.dp))
-            }
-        },
-        title = { Text(titles[step], textAlign = TextAlign.Center) },
-        text = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(descriptions[step], textAlign = TextAlign.Center)
-                Spacer(Modifier.height(18.dp))
-                Text("${step + 1} / 3", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-            }
-        },
-        confirmButton = {
-            Button(onClick = {
-                if (step < 2) step++ else onComplete()
-            }) { Text(if (step < 2) "Suivant" else "Commencer") }
-        },
-        dismissButton = {
-            TextButton(onClick = onComplete) { Text("Passer") }
-        }
-    )
 }
 
 private fun clipboardText(context: Context): String? {
@@ -1034,8 +795,3 @@ private fun openUrl(context: Context, url: String, onError: (String) -> Unit) {
 
 private fun formatDate(timestamp: Long): String = DateTimeFormatter.ofPattern("d MMM · HH:mm", Locale.FRENCH)
     .format(Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()))
-
-private fun formatTime(timestamp: Long): String = if (timestamp > 0) {
-    DateTimeFormatter.ofPattern("HH:mm", Locale.FRENCH)
-        .format(Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()))
-} else "maintenant"

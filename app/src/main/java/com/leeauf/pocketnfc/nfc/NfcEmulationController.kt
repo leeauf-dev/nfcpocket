@@ -10,7 +10,6 @@ import org.json.JSONObject
 
 data class ActiveNfcSession(
     val item: NfcItem,
-    val startedAt: Long,
     val readCount: Int
 )
 
@@ -18,7 +17,6 @@ object NfcEmulationController {
     private const val PREFS = "hce_state"
     private const val KEY_NDEF = "ndef"
     private const val KEY_ITEM = "item"
-    private const val KEY_STARTED_AT = "started_at"
     private const val KEY_READ_COUNT = "read_count"
     const val ACTION_NDEF_READ = "com.leeauf.pocketnfc.NDEF_READ"
     const val EXTRA_READ_COUNT = "read_count"
@@ -27,7 +25,6 @@ object NfcEmulationController {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString(KEY_NDEF, Base64.encodeToString(ndefMessage, Base64.NO_WRAP))
             .putString(KEY_ITEM, item.toJson().toString())
-            .putLong(KEY_STARTED_AT, System.currentTimeMillis())
             .putInt(KEY_READ_COUNT, 0)
             .apply()
     }
@@ -50,7 +47,6 @@ object NfcEmulationController {
         }.getOrNull() ?: return null
         return ActiveNfcSession(
             item = item,
-            startedAt = preferences.getLong(KEY_STARTED_AT, System.currentTimeMillis()),
             readCount = preferences.getInt(KEY_READ_COUNT, 0)
         )
     }

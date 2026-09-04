@@ -32,9 +32,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val _readCount = MutableStateFlow(restoredSession?.readCount ?: 0)
     val readCount = _readCount.asStateFlow()
 
-    private val _sessionStartedAt = MutableStateFlow(restoredSession?.startedAt ?: 0L)
-    val sessionStartedAt = _sessionStartedAt.asStateFlow()
-
     private val _message = MutableStateFlow<String?>(null)
     val message = _message.asStateFlow()
 
@@ -72,29 +69,22 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             NfcEmulationController.activate(getApplication(), used, NdefEncoder.encode(used))
             _activeItem.value = used
             _readCount.value = 0
-            _sessionStartedAt.value = timestamp
             viewModelScope.launch { store.save(used) }
         }.onFailure { _message.value = it.message ?: "Impossible d’émuler cette URL" }
     }
 
     fun saveAndEmulate(item: NfcItem) = emulate(item)
 
-    fun restartEmulation() {
-        _activeItem.value?.let(::emulate)
-    }
-
     fun stopEmulation() {
         NfcEmulationController.stop(getApplication())
         _activeItem.value = null
         _readCount.value = 0
-        _sessionStartedAt.value = 0L
     }
 
     fun refreshActiveSession() {
         val session = NfcEmulationController.activeSession(getApplication())
         _activeItem.value = session?.item
         _readCount.value = session?.readCount ?: 0
-        _sessionStartedAt.value = session?.startedAt ?: 0L
     }
 
     fun handleSharedText(text: String) {

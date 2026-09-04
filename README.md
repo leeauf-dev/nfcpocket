@@ -7,7 +7,7 @@
 
 NFC Pocket turns an Android phone into a temporary NFC tag for sharing web links. Pick a saved URL, hold another phone nearby, and it receives a standard NDEF URI record. The receiving phone does not need NFC Pocket installed.
 
-The app is small, offline, and deliberately focused on one job. There are no accounts, ads, analytics, network calls, or Internet permission.
+The app is small and deliberately focused on one job. There are no accounts, ads, analytics, or telemetry. NFC sharing and saved links work offline; the network is used only to fetch optional site favicons.
 
 ## Download
 
@@ -23,12 +23,12 @@ Development debug and signed release APKs are also available from successful [Gi
 - Shares `http://` and `https://` links as standard NDEF URI records
 - Opens directly in emulation mode from Android's Share menu
 - Pastes and normalizes web addresses, adding HTTPS when appropriate
-- Searches saved links and provides copy, share, open, duplicate, and swipe-to-delete actions
+- Shows cached site favicons and provides search, copy, share, open, duplicate, and swipe-to-delete actions
 - Saves links locally with custom names, favorites, and last-used dates
 - Keeps up to 100 non-favorite links; favorites are never removed automatically
 - Material 3 interface with system light/dark theme and dynamic colors
-- Clear NFC/HCE status, persistent active sessions, read counter, and contextual troubleshooting
-- No backend, account, telemetry, or runtime network access
+- Compact NFC/HCE status, persistent active sessions, and a read counter
+- No backend, account, analytics, telemetry, or third-party favicon service
 
 ## Requirements
 
@@ -69,7 +69,7 @@ HCE does not reproduce a physical tag UID and cannot emulate every NFC technolog
 
 ## Privacy
 
-Saved links remain in Android app storage. Backups are disabled, and the manifest does not request `INTERNET`. The only requested permission is NFC.
+Saved links remain in Android app storage and backups are disabled. NFC Pocket requests `INTERNET` only to load `https://<domain>/favicon.ico` from saved link domains. Favicons are cached locally for seven days; failures fall back to the built-in NFC icon. NFC sharing itself remains fully offline.
 
 ## Build
 

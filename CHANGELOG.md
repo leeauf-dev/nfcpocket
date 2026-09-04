@@ -4,6 +4,12 @@ Notable changes are documented here. This project follows [Semantic Versioning](
 
 ## [Unreleased]
 
+### Changed
+
+- Removed the first-run tutorial and reduced visible controls
+- Simplified home, editor, history, favorites, and emulation screens
+- Added direct, locally cached site favicons with a built-in offline fallback
+
 ## [1.1.0] - 2026-09-04
 
 ### Added

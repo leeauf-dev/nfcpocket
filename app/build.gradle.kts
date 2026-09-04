@@ -16,8 +16,8 @@ android {
         applicationId = "com.leeauf.pocketnfc"
         minSdk = 29
         targetSdk = 36
-        versionCode = ciVersionCode ?: 1_001_000
-        versionName = ciVersionName ?: "1.1.0"
+        versionCode = ciVersionCode ?: 1_002_000
+        versionName = ciVersionName ?: "1.2.0"
     }
 
     val releaseStore = providers.gradleProperty("releaseStoreFile").orNull
