@@ -88,13 +88,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.leeauf.pocketnfc.R
 import com.leeauf.pocketnfc.model.NfcItem
 import com.leeauf.pocketnfc.util.UrlUtils
+import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -111,12 +109,12 @@ fun NfcPocketApp(
     nfcStatus: NfcStatus,
     sharedText: String?,
     shareGeneration: Int,
+    clipboardCheckGeneration: Int,
     onShareHandled: () -> Unit,
     onOpenNfcSettings: () -> Unit,
     onPreferredService: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
     val allItems by viewModel.items.collectAsStateWithLifecycle()
     val activeItem by viewModel.activeItem.collectAsStateWithLifecycle()
     val readCount by viewModel.readCount.collectAsStateWithLifecycle()
@@ -125,8 +123,8 @@ fun NfcPocketApp(
     var screen by rememberSaveable { mutableStateOf(Screen.HOME) }
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
     var draftUrl by rememberSaveable { mutableStateOf("") }
-    var clipboardSuggestion by rememberSaveable { mutableStateOf<String?>(null) }
-    var ignoredClipboardUrl by rememberSaveable { mutableStateOf<String?>(null) }
+    var clipboardSuggestion by remember { mutableStateOf<String?>(null) }
+    var ignoredClipboardUrl by remember { mutableStateOf<String?>(null) }
     val editingItem = allItems.firstOrNull { it.id == editingId }
     fun openEditor(item: NfcItem? = null, initialUrl: String = "") {
         editingId = item?.id
@@ -141,19 +139,11 @@ fun NfcPocketApp(
             onShareHandled()
         }
     }
-    DisposableEffect(lifecycleOwner, ignoredClipboardUrl) {
-        fun inspectClipboard() {
-            val url = clipboardText(context)?.let(UrlUtils::extract)
-            clipboardSuggestion = url?.takeUnless { it == ignoredClipboardUrl }
-        }
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) inspectClipboard()
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-            inspectClipboard()
-        }
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    LaunchedEffect(clipboardCheckGeneration, ignoredClipboardUrl) {
+        if (clipboardCheckGeneration == 0) return@LaunchedEffect
+        delay(250)
+        val url = clipboardText(context)?.let(UrlUtils::extract)
+        clipboardSuggestion = url?.takeUnless { it == ignoredClipboardUrl }
     }
     LaunchedEffect(message) {
         message?.let {

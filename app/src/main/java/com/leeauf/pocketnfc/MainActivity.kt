@@ -27,6 +27,7 @@ class MainActivity : ComponentActivity() {
     private val viewModel by viewModels<AppViewModel>()
     private var shareText by mutableStateOf<String?>(null)
     private var shareGeneration by mutableIntStateOf(0)
+    private var clipboardCheckGeneration by mutableIntStateOf(0)
     private var nfcStatus by mutableStateOf(NfcStatus.UNAVAILABLE)
 
     private val readReceiver = object : BroadcastReceiver() {
@@ -56,6 +57,7 @@ class MainActivity : ComponentActivity() {
                     nfcStatus = nfcStatus,
                     sharedText = shareText,
                     shareGeneration = shareGeneration,
+                    clipboardCheckGeneration = clipboardCheckGeneration,
                     onShareHandled = { shareText = null },
                     onOpenNfcSettings = {
                         runCatching { startActivity(Intent(Settings.ACTION_NFC_SETTINGS)) }
@@ -71,6 +73,11 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         updateNfcStatus()
         viewModel.refreshActiveSession()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) clipboardCheckGeneration++
     }
 
     override fun onNewIntent(intent: Intent) {
