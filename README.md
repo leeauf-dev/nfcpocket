@@ -22,6 +22,7 @@ Signed release APKs are also available from successful [GitHub Actions runs](htt
 - Emulates a read-only NFC Forum Type 4 Tag through Android HCE
 - Shares `http://` and `https://` links as standard NDEF URI records
 - Opens directly in emulation mode from Android's Share menu
+- Appears in Android's selected-text actions and immediately emulates a URL found in the selection
 - Detects web links in the clipboard and offers a dismissible one-tap paste shortcut
 - Pastes and normalizes web addresses, adding HTTPS when appropriate
 - Shows cached site favicons and provides search, copy, share, open, duplicate, and swipe-to-delete actions

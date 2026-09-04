@@ -99,10 +99,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun acceptShareIntent(intent: Intent?) {
-        if (intent?.action != Intent.ACTION_SEND) return
-        val text = intent.getStringExtra(Intent.EXTRA_TEXT)
-            ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri?.toString()
-            ?: intent.data?.toString()
+        val text = when (intent?.action) {
+            Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)
+                ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri?.toString()
+                ?: intent.data?.toString()
+            Intent.ACTION_PROCESS_TEXT -> intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()
+            else -> null
+        }
         if (!text.isNullOrBlank()) {
             shareText = text
             shareGeneration++
