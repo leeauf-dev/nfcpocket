@@ -6,12 +6,17 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -80,6 +85,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -702,6 +712,8 @@ private fun EmulationScreen(
     onStop: () -> Unit
 ) {
     val available = nfcStatus == NfcStatus.AVAILABLE
+    var showReadConfirmation by remember { mutableStateOf(false) }
+    val checkProgress = remember { Animatable(0f) }
     val pulse = rememberInfiniteTransition(label = "NFC active")
     val pulseScale by pulse.animateFloat(
         initialValue = 0.9f,
@@ -715,6 +727,18 @@ private fun EmulationScreen(
         animationSpec = infiniteRepeatable(tween(1_300, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "NFC glow"
     )
+    LaunchedEffect(readCount) {
+        if (readCount > 0) {
+            showReadConfirmation = true
+            checkProgress.snapTo(0f)
+            checkProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(460, delayMillis = 100, easing = FastOutSlowInEasing)
+            )
+            delay(700)
+            showReadConfirmation = false
+        }
+    }
 
     Scaffold { padding ->
         Column(
@@ -744,6 +768,20 @@ private fun EmulationScreen(
                         modifier = Modifier.fillMaxSize().padding(32.dp),
                         tint = if (available) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                     )
+                }
+                AnimatedVisibility(
+                    visible = showReadConfirmation,
+                    enter = fadeIn(tween(120)),
+                    exit = fadeOut(tween(220))
+                ) {
+                    Surface(
+                        modifier = Modifier.size(82.dp),
+                        shape = CircleShape,
+                        color = Color(0xFF16865A),
+                        shadowElevation = 8.dp
+                    ) {
+                        DrawnCheckMark(checkProgress.value)
+                    }
                 }
             }
             Spacer(Modifier.height(18.dp))
@@ -811,6 +849,29 @@ private fun EmulationScreen(
                 Text("Stop")
             }
         }
+    }
+}
+
+@Composable
+private fun DrawnCheckMark(progress: Float) {
+    Canvas(Modifier.fillMaxSize().padding(18.dp)) {
+        val fullPath = Path().apply {
+            moveTo(size.width * 0.16f, size.height * 0.52f)
+            lineTo(size.width * 0.41f, size.height * 0.76f)
+            lineTo(size.width * 0.86f, size.height * 0.27f)
+        }
+        val measure = PathMeasure().apply { setPath(fullPath, false) }
+        val visiblePath = Path()
+        measure.getSegment(0f, measure.length * progress, visiblePath, true)
+        drawPath(
+            path = visiblePath,
+            color = Color.White,
+            style = Stroke(
+                width = 6.dp.toPx(),
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round
+            )
+        )
     }
 }
 
