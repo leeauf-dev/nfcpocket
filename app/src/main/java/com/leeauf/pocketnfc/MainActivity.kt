@@ -73,6 +73,12 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         updateNfcStatus()
         viewModel.refreshActiveSession()
+        NfcEmulationController.setListenOnly(this, true)
+    }
+
+    override fun onPause() {
+        NfcEmulationController.setListenOnly(this, false)
+        super.onPause()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

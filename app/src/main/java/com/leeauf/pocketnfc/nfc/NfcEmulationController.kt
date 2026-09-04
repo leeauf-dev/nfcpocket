@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.nfc.NfcAdapter
 import android.nfc.cardemulation.CardEmulation
+import android.os.Build
 import android.util.Base64
 import com.leeauf.pocketnfc.model.NfcItem
 import org.json.JSONObject
@@ -67,6 +68,22 @@ object NfcEmulationController {
                 cardEmulation.setPreferredService(context, component)
             } else if (context is android.app.Activity) {
                 cardEmulation.unsetPreferredService(context)
+            }
+        }
+    }
+
+    fun setListenOnly(activity: android.app.Activity, enabled: Boolean) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) return
+        val adapter = NfcAdapter.getDefaultAdapter(activity) ?: return
+        runCatching {
+            if (enabled) {
+                adapter.setDiscoveryTechnology(
+                    activity,
+                    NfcAdapter.FLAG_READER_DISABLE,
+                    NfcAdapter.FLAG_LISTEN_KEEP
+                )
+            } else {
+                adapter.resetDiscoveryTechnology(activity)
             }
         }
     }
