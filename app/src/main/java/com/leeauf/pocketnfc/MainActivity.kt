@@ -31,7 +31,9 @@ class MainActivity : ComponentActivity() {
 
     private val readReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == NfcEmulationController.ACTION_NDEF_READ) viewModel.notifyRead()
+            if (intent?.action != NfcEmulationController.ACTION_NDEF_READ) return
+            val count = intent.getIntExtra(NfcEmulationController.EXTRA_READ_COUNT, 0)
+            viewModel.notifyRead(count)
         }
     }
 
@@ -39,6 +41,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         updateNfcStatus()
+        viewModel.refreshActiveSession()
         acceptShareIntent(intent)
         ContextCompat.registerReceiver(
             this,
@@ -67,6 +70,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         updateNfcStatus()
+        viewModel.refreshActiveSession()
     }
 
     override fun onNewIntent(intent: Intent) {

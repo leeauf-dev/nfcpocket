@@ -15,17 +15,19 @@ Download the APK from the [Releases page](https://github.com/leeauf-dev/nfcpocke
 
 Development debug and signed release APKs are also available from successful [GitHub Actions runs](https://github.com/leeauf-dev/nfcpocket/actions/workflows/build-apk.yml) under the `nfcpocket-apk` artifact.
 
-> Releases from v0.2.0 onward use the project signing key and the Android application ID `com.leeauf.pocketnfc`. The earlier v0.1.0 preview used a different application ID and must be removed separately.
+> Releases from v1.0.0 onward use the project signing key and the Android application ID `com.leeauf.pocketnfc`. The earlier v0.1.0 preview used a different application ID and must be removed separately.
 
 ## Features
 
 - Emulates a read-only NFC Forum Type 4 Tag through Android HCE
 - Shares `http://` and `https://` links as standard NDEF URI records
 - Opens directly in emulation mode from Android's Share menu
+- Pastes and normalizes web addresses, adding HTTPS when appropriate
+- Searches saved links and provides copy, share, open, duplicate, and swipe-to-delete actions
 - Saves links locally with custom names, favorites, and last-used dates
 - Keeps up to 100 non-favorite links; favorites are never removed automatically
 - Material 3 interface with system light/dark theme and dynamic colors
-- Clear NFC/HCE status, direct NFC settings shortcut, and read feedback
+- Clear NFC/HCE status, persistent active sessions, read counter, and contextual troubleshooting
 - No backend, account, telemetry, or runtime network access
 
 ## Requirements
@@ -77,7 +79,7 @@ The repository uses Kotlin, Gradle Kotlin DSL, Jetpack Compose, and Material 3. 
 GitHub → Actions → Build APK → Artifacts → nfcpocket-apk
 ```
 
-Releases are created manually from **Actions → Publish release → Run workflow**. Enter a semantic version such as `0.2.0` and choose whether it is a pre-release. The workflow builds a signed APK, verifies its signature, creates the `v0.2.0` tag, and attaches the APK plus a SHA-256 checksum to the GitHub Release. It requires these repository secrets:
+Releases are created manually from **Actions → Publish release → Run workflow**. Enter a semantic version such as `1.1.0` and choose whether it is a pre-release. The workflow builds a signed APK, verifies its signature, creates the matching tag, and attaches the APK plus a SHA-256 checksum to the GitHub Release. It requires these repository secrets:
 
 - `ANDROID_KEYSTORE_BASE64`
 - `ANDROID_KEYSTORE_PASSWORD`

@@ -56,7 +56,8 @@ class NdefHostApduService : HostApduService() {
 
     private fun reportRead() {
         readReported = true
-        sendBroadcast(Intent(NfcEmulationController.ACTION_NDEF_READ).setPackage(packageName))
+        val readCount = NfcEmulationController.recordRead(this)
+        sendBroadcast(Intent(NfcEmulationController.ACTION_NDEF_READ).setPackage(packageName).putExtra(NfcEmulationController.EXTRA_READ_COUNT, readCount))
     }
 
     private fun selectedFile(command: ByteArray): SelectedFile? {
