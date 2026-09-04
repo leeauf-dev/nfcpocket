@@ -33,7 +33,7 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
 
-      - name: Build debug and signed release APKs
+      - name: Build signed release APK
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -47,19 +47,19 @@ jobs:
             fi
           done
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/nfcpocket-release.p12"
-          ./gradlew assembleDebug assembleRelease \
+          ./gradlew assembleRelease \
             -PreleaseStoreFile="$RUNNER_TEMP/nfcpocket-release.p12" \
             -PreleaseStorePassword="$ANDROID_KEYSTORE_PASSWORD" \
             -PreleaseKeyAlias="nfcpocket" \
             -PreleaseKeyPassword="$ANDROID_KEY_PASSWORD"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk dist/NFC-Pocket-release.apk
 
-      - name: Upload APKs
+      - name: Upload signed release APK
         uses: actions/upload-artifact@v7
         with:
           name: nfcpocket-apk
-          path: |
-            app/build/outputs/apk/debug/app-debug.apk
-            app/build/outputs/apk/release/app-release.apk
+          path: dist/NFC-Pocket-release.apk
           if-no-files-found: error
           retention-days: 30

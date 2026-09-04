@@ -79,6 +79,8 @@ The repository uses Kotlin, Gradle Kotlin DSL, Jetpack Compose, and Material 3. 
 GitHub → Actions → Build APK → Artifacts → nfcpocket-apk
 ```
 
+The build artifact contains only the signed release APK. GitHub Actions always downloads artifacts as a ZIP archive. For a direct `.apk` download, use a manually published entry on the [Releases page](https://github.com/leeauf-dev/nfcpocket/releases).
+
 Releases are created manually from **Actions → Publish release → Run workflow**. Enter a semantic version such as `1.1.0` and choose whether it is a pre-release. The workflow builds a signed APK, verifies its signature, creates the matching tag, and attaches the APK plus a SHA-256 checksum to the GitHub Release. It uses the fixed, non-secret key alias `nfcpocket` and requires these repository secrets:
 
 - `ANDROID_KEYSTORE_BASE64`
