@@ -5,8 +5,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.leeauf.nfcpocket.data.NfcStore
 import dev.leeauf.nfcpocket.model.NfcItem
-import dev.leeauf.nfcpocket.model.NfcPayload
-import dev.leeauf.nfcpocket.model.NfcType
 import dev.leeauf.nfcpocket.nfc.NdefEncoder
 import dev.leeauf.nfcpocket.nfc.NfcEmulationController
 import kotlinx.coroutines.flow.SharingStarted
@@ -63,14 +61,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun handleSharedText(text: String) {
-        val cleaned = text.trim()
-        if (cleaned.isBlank()) return
-        val isUrl = cleaned.startsWith("https://", true) || cleaned.startsWith("http://", true)
-        val item = if (isUrl) {
-            NfcItem(type = NfcType.URL, title = "Lien partagé", payload = NfcPayload.Url(cleaned))
-        } else {
-            NfcItem(type = NfcType.TEXT, title = "Texte partagé", payload = NfcPayload.Text(cleaned))
+        val url = URL_PATTERN.find(text.trim())?.value?.trimEnd('.', ',', ';', ')')
+        if (url == null) {
+            _message.value = "Le contenu partagé ne contient pas d’URL http(s)"
+            return
         }
+        val host = runCatching { android.net.Uri.parse(url).host }.getOrNull()
+        val item = NfcItem(title = host?.removePrefix("www.") ?: "Lien partagé", url = url)
         emulate(item)
     }
 
@@ -80,5 +77,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun consumeMessage() {
         _message.value = null
+    }
+
+    private companion object {
+        val URL_PATTERN = Regex("https?://\\S+", RegexOption.IGNORE_CASE)
     }
 }

@@ -15,17 +15,9 @@ L’application utilise Android Host Card Emulation (`HostApduService`) et impl�
 
 L’implémentation est autonome et n’ajoute aucune bibliothèque NFC externe. Les projets Apache-2.0 [LuigiVampa92/ndef-emulator](https://github.com/LuigiVampa92/ndef-emulator) et [MichaelsPlayground/NfcHceNdefEmulator](https://github.com/MichaelsPlayground/NfcHceNdefEmulator) ont été étudiés comme références d’interopérabilité, mais aucun de leur code n’est embarqué.
 
-## Contenus pris en charge
+## Contenu pris en charge
 
-- URL (`https://…`) ;
-- téléphone (`tel:`) ;
-- SMS (`sms:` avec message optionnel) ;
-- email (`mailto:` avec sujet et corps optionnels) ;
-- localisation (`geo:`) ;
-- texte NDEF UTF-8 ;
-- contact vCard 3.0 (`text/vcard`).
-
-Les modèles de payload sont séparés de l’encodage NDEF afin de faciliter l’ajout de nouveaux types.
+NFC Pocket est volontairement centré sur un seul usage : les URL `http://` et `https://`, encodées comme URI NDEF. Chaque lien possède un nom court personnalisable pour le retrouver rapidement.
 
 L’icône NFC utilisée dans l’application et son icône adaptative provient de [Google Material Design Icons](https://github.com/google/material-design-icons/tree/master/src/device/nfc/materialicons), sous licence Apache-2.0. Elle est conservée en vector drawable sur fond transparent ; l’icône adaptative ajoute uniquement un fond vert uni.
 
@@ -35,7 +27,7 @@ Les éléments, favoris et dates d’utilisation sont stockés uniquement sur l�
 
 ## Cible de partage Android
 
-NFC Pocket accepte `ACTION_SEND` pour `text/plain` et `text/uri-list`. Un texte commençant par `http://` ou `https://` est interprété comme une URL ; tout autre contenu devient un enregistrement texte. Depuis Chrome : **Partager → NFC Pocket** ouvre directement l’écran d’émulation et ajoute le contenu à l’historique.
+NFC Pocket accepte `ACTION_SEND` pour `text/plain` et `text/uri-list`. La première URL `http://` ou `https://` du contenu partagé est détectée ; sans URL valide, l’application affiche un message et n’émule rien. Depuis Chrome : **Partager → NFC Pocket** ouvre directement l’écran d’émulation et ajoute le lien à l’historique.
 
 ## Build exclusivement avec GitHub Actions
 
@@ -56,7 +48,7 @@ Pour télécharger l’APK :
 - le tag est en lecture seule et ne peut pas être réécrit par le lecteur ;
 - le comportement de détection NDEF, l’activité écran verrouillé et le routage de l’AID standard peuvent varier selon Android, HyperOS et les restrictions constructeur ;
 - une autre application HCE déclarant le même AID peut provoquer un conflit de routage ; NFC Pocket se déclare service préféré pendant que son écran d’émulation est au premier plan ;
-- certains téléphones ne lancent pas automatiquement une application pour certains schémas (`geo:`, `sms:`, `mailto:` ou vCard), même si le message NDEF est correctement lu ;
+- certains téléphones ne proposent pas automatiquement d’ouvrir l’URL, même si le message NDEF est correctement lu ;
 - la proximité téléphone-à-téléphone dépend fortement de la position des deux antennes NFC et les deux appareils ne peuvent pas simultanément agir comme lecteurs.
 
 ## Confidentialité
