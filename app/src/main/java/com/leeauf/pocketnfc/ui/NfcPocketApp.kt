@@ -41,16 +41,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
@@ -410,7 +405,7 @@ private fun QuickStartCard(onCreate: () -> Unit, onPaste: () -> Unit) {
                 Text("Nouvelle URL")
             }
             OutlinedButton(onClick = onPaste, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                Icon(Icons.Default.ContentPaste, contentDescription = null)
+                Icon(painterResource(R.drawable.ic_content_paste), contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text("Coller depuis le presse-papiers")
             }
@@ -425,7 +420,7 @@ private fun LastUsedCard(item: NfcItem, onEmulate: (NfcItem) -> Unit) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Link, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Icon(painterResource(R.drawable.ic_nfc_material), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(item.title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -596,7 +591,7 @@ private fun ItemMenu(
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
                 text = { Text("Copier l’URL") },
-                leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) },
+                leadingIcon = { Icon(painterResource(R.drawable.ic_content_copy), contentDescription = null) },
                 onClick = { expanded = false; onCopy(item) }
             )
             DropdownMenuItem(
@@ -606,7 +601,7 @@ private fun ItemMenu(
             )
             DropdownMenuItem(
                 text = { Text("Ouvrir") },
-                leadingIcon = { Icon(Icons.Default.OpenInNew, contentDescription = null) },
+                leadingIcon = { Icon(painterResource(R.drawable.ic_open_in_new), contentDescription = null) },
                 onClick = { expanded = false; onOpen(item) }
             )
             DropdownMenuItem(
@@ -733,7 +728,7 @@ private fun EditorScreen(
         ) {
             Text("Collez une adresse ou saisissez-la. NFC Pocket ajoutera https:// si nécessaire.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             OutlinedButton(onClick = ::paste, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                Icon(Icons.Default.ContentPaste, contentDescription = null)
+                Icon(painterResource(R.drawable.ic_content_paste), contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text("Coller une URL")
             }
@@ -899,9 +894,9 @@ private fun EmulationScreen(
             }
             Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                QuickAction(Icons.Default.ContentCopy, "Copier", onCopy, Modifier.weight(1f))
+                QuickPainterAction(painterResource(R.drawable.ic_content_copy), "Copier", onCopy, Modifier.weight(1f))
                 QuickAction(Icons.Default.Share, "Partager", onShare, Modifier.weight(1f))
-                QuickAction(Icons.Default.OpenInNew, "Ouvrir", onOpen, Modifier.weight(1f))
+                QuickPainterAction(painterResource(R.drawable.ic_open_in_new), "Ouvrir", onOpen, Modifier.weight(1f))
             }
             AnimatedVisibility(showHelp && readCount == 0) {
                 Card(
@@ -929,7 +924,7 @@ private fun EmulationScreen(
             }
             if (readCount > 0 && available) {
                 OutlinedButton(onClick = onRestart, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                    Icon(Icons.Default.Replay, contentDescription = null)
+                    Icon(Icons.Default.PlayArrow, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text("Nouvelle session")
                 }
@@ -954,6 +949,20 @@ private fun QuickAction(
 ) {
     OutlinedButton(onClick = onClick, modifier = modifier.height(52.dp), contentPadding = PaddingValues(horizontal = 6.dp)) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(5.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+    }
+}
+
+@Composable
+private fun QuickPainterAction(
+    painter: androidx.compose.ui.graphics.painter.Painter,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedButton(onClick = onClick, modifier = modifier.height(52.dp), contentPadding = PaddingValues(horizontal = 6.dp)) {
+        Icon(painter, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(5.dp))
         Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
     }
