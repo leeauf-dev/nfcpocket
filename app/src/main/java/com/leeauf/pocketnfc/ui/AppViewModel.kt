@@ -1,12 +1,12 @@
-package dev.leeauf.nfcpocket.ui
+package com.leeauf.pocketnfc.ui
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import dev.leeauf.nfcpocket.data.NfcStore
-import dev.leeauf.nfcpocket.model.NfcItem
-import dev.leeauf.nfcpocket.nfc.NdefEncoder
-import dev.leeauf.nfcpocket.nfc.NfcEmulationController
+import com.leeauf.pocketnfc.data.NfcStore
+import com.leeauf.pocketnfc.model.NfcItem
+import com.leeauf.pocketnfc.nfc.NdefEncoder
+import com.leeauf.pocketnfc.nfc.NfcEmulationController
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.MutableStateFlow

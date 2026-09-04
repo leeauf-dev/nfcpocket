@@ -1,4 +1,4 @@
-package dev.leeauf.nfcpocket
+package com.leeauf.pocketnfc
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -17,11 +17,11 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
-import dev.leeauf.nfcpocket.nfc.NfcEmulationController
-import dev.leeauf.nfcpocket.ui.AppViewModel
-import dev.leeauf.nfcpocket.ui.NfcPocketApp
-import dev.leeauf.nfcpocket.ui.NfcStatus
-import dev.leeauf.nfcpocket.ui.theme.NfcPocketTheme
+import com.leeauf.pocketnfc.nfc.NfcEmulationController
+import com.leeauf.pocketnfc.ui.AppViewModel
+import com.leeauf.pocketnfc.ui.NfcPocketApp
+import com.leeauf.pocketnfc.ui.NfcStatus
+import com.leeauf.pocketnfc.ui.theme.NfcPocketTheme
 
 class MainActivity : ComponentActivity() {
     private val viewModel by viewModels<AppViewModel>()

@@ -1,4 +1,4 @@
-name: Build debug APK
+name: Build APK
 
 on:
   push:
@@ -33,13 +33,34 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
 
-      - name: Build APKs
-        run: ./gradlew assembleDebug assembleRelease
+      - name: Build debug and signed release APKs
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for secret in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [[ -z "${!secret}" ]]; then
+              echo "Required signing secret $secret is missing." >&2
+              exit 1
+            fi
+          done
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/nfcpocket-release.p12"
+          ./gradlew assembleDebug assembleRelease \
+            -PreleaseStoreFile="$RUNNER_TEMP/nfcpocket-release.p12" \
+            -PreleaseStorePassword="$ANDROID_KEYSTORE_PASSWORD" \
+            -PreleaseKeyAlias="$ANDROID_KEY_ALIAS" \
+            -PreleaseKeyPassword="$ANDROID_KEY_PASSWORD"
+          apksigner verify --verbose app/build/outputs/apk/release/app-release.apk
 
-      - name: Upload debug APK
+      - name: Upload APKs
         uses: actions/upload-artifact@v7
         with:
           name: nfcpocket-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 30

@@ -7,22 +7,23 @@ plugins {
 }
 
 android {
-    namespace = "dev.leeauf.nfcpocket"
+    namespace = "com.leeauf.pocketnfc"
     compileSdk = 36
+    val ciVersionName = providers.gradleProperty("releaseVersionName").orNull
+    val ciVersionCode = providers.gradleProperty("releaseVersionCode").orNull?.toInt()
 
     defaultConfig {
-        applicationId = "dev.leeauf.nfcpocket"
+        applicationId = "com.leeauf.pocketnfc"
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = ciVersionCode ?: 2_000
+        versionName = ciVersionName ?: "0.2.0"
     }
 
     val releaseStore = providers.gradleProperty("releaseStoreFile").orNull
     val releaseStorePassword = providers.gradleProperty("releaseStorePassword").orNull
     val releaseKeyAlias = providers.gradleProperty("releaseKeyAlias").orNull
     val releaseKeyPassword = providers.gradleProperty("releaseKeyPassword").orNull
-    val previewSigning = providers.gradleProperty("previewSigning").isPresent
 
     signingConfigs {
         if (listOf(releaseStore, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { it != null }) {
@@ -31,6 +32,7 @@ android {
                 storePassword = releaseStorePassword
                 keyAlias = releaseKeyAlias
                 keyPassword = releaseKeyPassword
+                storeType = "PKCS12"
             }
         }
     }
@@ -40,7 +42,6 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             signingConfig = signingConfigs.findByName("release")
-                ?: if (previewSigning) signingConfigs.getByName("debug") else null
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

@@ -1,4 +1,4 @@
-package dev.leeauf.nfcpocket.nfc
+package com.leeauf.pocketnfc.nfc
 
 import android.content.Intent
 import android.nfc.cardemulation.HostApduService

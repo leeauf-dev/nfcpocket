@@ -1,4 +1,4 @@
-package dev.leeauf.nfcpocket.model
+package com.leeauf.pocketnfc.model
 
 import org.json.JSONObject
 import java.util.UUID

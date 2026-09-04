@@ -1,8 +1,8 @@
-package dev.leeauf.nfcpocket.nfc
+package com.leeauf.pocketnfc.nfc
 
 import android.nfc.NdefMessage
 import android.nfc.NdefRecord
-import dev.leeauf.nfcpocket.model.NfcItem
+import com.leeauf.pocketnfc.model.NfcItem
 
 object NdefEncoder {
     fun encode(item: NfcItem): ByteArray = NdefMessage(

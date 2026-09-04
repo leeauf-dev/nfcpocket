@@ -13,9 +13,9 @@ The app is small, offline, and deliberately focused on one job. There are no acc
 
 Download the APK from the [Releases page](https://github.com/leeauf-dev/nfcpocket/releases). Android may ask you to allow installations from your browser or file manager.
 
-Development APKs are also available from successful [GitHub Actions runs](https://github.com/leeauf-dev/nfcpocket/actions/workflows/build-apk.yml) under the `nfcpocket-apk` artifact.
+Development debug and signed release APKs are also available from successful [GitHub Actions runs](https://github.com/leeauf-dev/nfcpocket/actions/workflows/build-apk.yml) under the `nfcpocket-apk` artifact.
 
-> Release previews are debug-signed until a project signing key is configured. A later signing-key change may require uninstalling the previous preview before installing an update.
+> Releases from v0.2.0 onward use the project signing key and the Android application ID `com.leeauf.pocketnfc`. The earlier v0.1.0 preview used a different application ID and must be removed separately.
 
 ## Features
 
@@ -74,17 +74,17 @@ Saved links remain in Android app storage. Backups are disabled, and the manifes
 The repository uses Kotlin, Gradle Kotlin DSL, Jetpack Compose, and Material 3. Builds run on GitHub Actions with Java 17 and Android API 36.
 
 ```text
-GitHub → Actions → Build debug APK → Artifacts → nfcpocket-apk
+GitHub → Actions → Build APK → Artifacts → nfcpocket-apk
 ```
 
-The release workflow runs for tags matching `v*` and attaches the APK plus a SHA-256 checksum to a GitHub Release. Maintainers can configure production signing with these repository secrets:
+Releases are created manually from **Actions → Publish release → Run workflow**. Enter a semantic version such as `0.2.0` and choose whether it is a pre-release. The workflow builds a signed APK, verifies its signature, creates the `v0.2.0` tag, and attaches the APK plus a SHA-256 checksum to the GitHub Release. It requires these repository secrets:
 
 - `ANDROID_KEYSTORE_BASE64`
 - `ANDROID_KEYSTORE_PASSWORD`
 - `ANDROID_KEY_ALIAS`
 - `ANDROID_KEY_PASSWORD`
 
-Without all four secrets, the workflow publishes a clearly marked debug-signed preview APK.
+The workflow fails safely if any signing secret is missing; it never publishes a debug-signed release.
 
 ## Contributing
 

@@ -1,4 +1,4 @@
-package dev.leeauf.nfcpocket.nfc
+package com.leeauf.pocketnfc.nfc
 
 import android.content.ComponentName
 import android.content.Context
@@ -9,7 +9,7 @@ import android.util.Base64
 object NfcEmulationController {
     private const val PREFS = "hce_state"
     private const val KEY_NDEF = "ndef"
-    const val ACTION_NDEF_READ = "dev.leeauf.nfcpocket.NDEF_READ"
+    const val ACTION_NDEF_READ = "com.leeauf.pocketnfc.NDEF_READ"
 
     fun activate(context: Context, ndefMessage: ByteArray) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()

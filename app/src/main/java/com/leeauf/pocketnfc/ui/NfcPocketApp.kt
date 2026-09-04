@@ -1,4 +1,4 @@
-package dev.leeauf.nfcpocket.ui
+package com.leeauf.pocketnfc.ui
 
 import android.net.Uri
 import androidx.activity.compose.BackHandler
@@ -78,8 +78,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.leeauf.nfcpocket.R
-import dev.leeauf.nfcpocket.model.NfcItem
+import com.leeauf.pocketnfc.R
+import com.leeauf.pocketnfc.model.NfcItem
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

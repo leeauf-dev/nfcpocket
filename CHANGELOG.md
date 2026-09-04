@@ -2,6 +2,13 @@
 
 Notable changes are documented here. This project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- Android application ID and namespace changed to `com.leeauf.pocketnfc`
+- Releases are now manually triggered and always use the persistent project signing key
+
 ## [0.1.0] - 2026-09-04
 
 ### Added
