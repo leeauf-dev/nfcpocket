@@ -29,7 +29,7 @@ data class NfcItem(
             require(url.isNotBlank())
             return NfcItem(
                 id = json.getString("id"),
-                title = json.optString("title", "Lien"),
+                title = json.optString("title", "Link"),
                 url = url,
                 favorite = json.optBoolean("favorite", false),
                 createdAt = json.optLong("createdAt", System.currentTimeMillis()),

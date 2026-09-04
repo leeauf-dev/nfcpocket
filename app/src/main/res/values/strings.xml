@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NFC Pocket</string>
-    <string name="hce_service_description">Émulation de tag NDEF</string>
+    <string name="hce_service_description">NDEF tag emulation</string>
     <string name="hce_aid_description">Application NFC Forum NDEF</string>
 </resources>

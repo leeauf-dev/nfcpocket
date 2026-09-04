@@ -30,5 +30,5 @@ object UrlUtils {
     fun defaultTitle(url: String): String = Uri.parse(url).host
         ?.removePrefix("www.")
         ?.takeIf { it.isNotBlank() }
-        ?: "Lien"
+        ?: "Link"
 }

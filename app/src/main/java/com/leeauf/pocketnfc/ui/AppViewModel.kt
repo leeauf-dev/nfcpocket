@@ -53,13 +53,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun duplicate(item: NfcItem) {
         val copy = item.copy(
             id = UUID.randomUUID().toString(),
-            title = "${item.title} (copie)",
+            title = "${item.title} (copy)",
             favorite = false,
             createdAt = System.currentTimeMillis(),
             lastUsedAt = null
         )
         save(copy)
-        _message.value = "Copie ajoutée"
+        _message.value = "Copy added"
     }
 
     fun emulate(item: NfcItem) {
@@ -70,7 +70,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             _activeItem.value = used
             _readCount.value = 0
             viewModelScope.launch { store.save(used) }
-        }.onFailure { _message.value = it.message ?: "Impossible d’émuler cette URL" }
+        }.onFailure { _message.value = it.message ?: "Unable to emulate this URL" }
     }
 
     fun saveAndEmulate(item: NfcItem) = emulate(item)
@@ -90,7 +90,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun handleSharedText(text: String) {
         val url = UrlUtils.extract(text)
         if (url == null) {
-            _message.value = "Le contenu partagé ne contient pas d’URL web valide"
+            _message.value = "The shared content does not contain a valid web URL"
             return
         }
         emulate(NfcItem(title = UrlUtils.defaultTitle(url), url = url))
@@ -101,7 +101,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             ?: NfcEmulationController.activeSession(getApplication())?.readCount
             ?: (_readCount.value + 1)
         _readCount.value = count
-        _message.value = if (count == 1) "URL lue" else "URL lue $count fois"
+        _message.value = if (count == 1) "URL read" else "URL read $count times"
         _activeItem.value?.let { current ->
             val used = current.copy(lastUsedAt = System.currentTimeMillis())
             _activeItem.value = used

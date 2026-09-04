@@ -8,7 +8,7 @@ object NdefEncoder {
     fun encode(item: NfcItem): ByteArray = NdefMessage(
         arrayOf(NdefRecord.createUri(item.url))
     ).toByteArray().also {
-        require(it.size <= MAX_NDEF_SIZE) { "URL trop volumineuse pour l’émulation" }
+        require(it.size <= MAX_NDEF_SIZE) { "URL is too large to emulate" }
     }
 
     private const val MAX_NDEF_SIZE = 0x7FFD

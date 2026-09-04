@@ -88,6 +88,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.leeauf.pocketnfc.R
 import com.leeauf.pocketnfc.model.NfcItem
@@ -113,6 +116,7 @@ fun NfcPocketApp(
     onPreferredService: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val allItems by viewModel.items.collectAsStateWithLifecycle()
     val activeItem by viewModel.activeItem.collectAsStateWithLifecycle()
     val readCount by viewModel.readCount.collectAsStateWithLifecycle()
@@ -121,6 +125,8 @@ fun NfcPocketApp(
     var screen by rememberSaveable { mutableStateOf(Screen.HOME) }
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
     var draftUrl by rememberSaveable { mutableStateOf("") }
+    var clipboardSuggestion by rememberSaveable { mutableStateOf<String?>(null) }
+    var ignoredClipboardUrl by rememberSaveable { mutableStateOf<String?>(null) }
     val editingItem = allItems.firstOrNull { it.id == editingId }
     fun openEditor(item: NfcItem? = null, initialUrl: String = "") {
         editingId = item?.id
@@ -130,9 +136,24 @@ fun NfcPocketApp(
 
     LaunchedEffect(shareGeneration) {
         sharedText?.let {
+            clipboardSuggestion = null
             viewModel.handleSharedText(it)
             onShareHandled()
         }
+    }
+    DisposableEffect(lifecycleOwner, ignoredClipboardUrl) {
+        fun inspectClipboard() {
+            val url = clipboardText(context)?.let(UrlUtils::extract)
+            clipboardSuggestion = url?.takeUnless { it == ignoredClipboardUrl }
+        }
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) inspectClipboard()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            inspectClipboard()
+        }
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     LaunchedEffect(message) {
         message?.let {
@@ -156,7 +177,9 @@ fun NfcPocketApp(
                 onOpenNfcSettings = onOpenNfcSettings,
                 onCopy = {
                     copyUrl(context, activeItem!!.url)
-                    viewModel.showMessage("URL copiée")
+                    ignoredClipboardUrl = activeItem!!.url
+                    clipboardSuggestion = null
+                    viewModel.showMessage("URL copied")
                 },
                 onStop = viewModel::stopEmulation
             )
@@ -179,11 +202,43 @@ fun NfcPocketApp(
                 onEmulate = viewModel::emulate,
                 onCopy = {
                     copyUrl(context, it.url)
-                    viewModel.showMessage("URL copiée")
+                    ignoredClipboardUrl = it.url
+                    clipboardSuggestion = null
+                    viewModel.showMessage("URL copied")
                 },
                 onShare = { shareUrl(context, it.url, viewModel::showMessage) },
                 onOpen = { openUrl(context, it.url, viewModel::showMessage) },
                 onDuplicate = viewModel::duplicate
+            )
+        }
+        if (clipboardSuggestion != null && screen == Screen.HOME && activeItem == null) {
+            val suggestedUrl = clipboardSuggestion!!
+            AlertDialog(
+                onDismissRequest = {
+                    ignoredClipboardUrl = suggestedUrl
+                    clipboardSuggestion = null
+                },
+                title = { Text("Link in clipboard") },
+                text = {
+                    Text(
+                        suggestedUrl,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        ignoredClipboardUrl = suggestedUrl
+                        clipboardSuggestion = null
+                        openEditor(initialUrl = suggestedUrl)
+                    }) { Text("Paste link") }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        ignoredClipboardUrl = suggestedUrl
+                        clipboardSuggestion = null
+                    }) { Text("Not now") }
+                }
             )
         }
         SnackbarHost(
@@ -225,7 +280,7 @@ private fun HomeScreen(
             ExtendedFloatingActionButton(
                 onClick = onCreate,
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("Ajouter") }
+                text = { Text("Add") }
             )
         }
     ) { padding ->
@@ -245,10 +300,10 @@ private fun HomeScreen(
                         value = search,
                         onValueChange = { search = it },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                        placeholder = { Text("Rechercher") },
+                        placeholder = { Text("Search") },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         trailingIcon = if (search.isNotEmpty()) {
-                            { IconButton(onClick = { search = "" }) { Icon(Icons.Default.Close, "Effacer") } }
+                            { IconButton(onClick = { search = "" }) { Icon(Icons.Default.Close, "Clear") } }
                         } else null,
                         singleLine = true
                     )
@@ -257,7 +312,7 @@ private fun HomeScreen(
             if (favorites.isNotEmpty()) {
                 item {
                     SectionTitle(
-                        "Favoris",
+                        "Favorites",
                         Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
                     )
                 }
@@ -276,7 +331,7 @@ private fun HomeScreen(
                     )
                 }
             }
-            item { SectionTitle("Historique", Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) }
+            item { SectionTitle("History", Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) }
             if (recent.isEmpty()) {
                 item {
                     EmptyHistory(
@@ -311,16 +366,16 @@ private fun HomeScreen(
     pendingDelete?.let { item ->
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
-            title = { Text("Supprimer ce lien ?") },
-            text = { Text("« ${item.title} » sera retiré de NFC Pocket.") },
+            title = { Text("Delete this link?") },
+            text = { Text("“${item.title}” will be removed from NFC Pocket.") },
             confirmButton = {
                 TextButton(onClick = {
                     pendingDelete = null
                     onDelete(item)
-                }) { Text("Supprimer", color = MaterialTheme.colorScheme.error) }
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDelete = null }) { Text("Annuler") }
+                TextButton(onClick = { pendingDelete = null }) { Text("Cancel") }
             }
         )
     }
@@ -330,10 +385,10 @@ private fun HomeScreen(
 private fun NfcStatusCard(status: NfcStatus, onOpenSettings: () -> Unit) {
     val available = status == NfcStatus.AVAILABLE
     val label = when (status) {
-        NfcStatus.AVAILABLE -> "NFC prêt"
-        NfcStatus.DISABLED -> "NFC désactivé"
-        NfcStatus.HCE_UNSUPPORTED -> "HCE non compatible"
-        NfcStatus.UNAVAILABLE -> "NFC indisponible"
+        NfcStatus.AVAILABLE -> "NFC ready"
+        NfcStatus.DISABLED -> "NFC disabled"
+        NfcStatus.HCE_UNSUPPORTED -> "HCE not supported"
+        NfcStatus.UNAVAILABLE -> "NFC unavailable"
     }
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -351,7 +406,7 @@ private fun NfcStatusCard(status: NfcStatus, onOpenSettings: () -> Unit) {
             Spacer(Modifier.width(10.dp))
             Text(label, modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
             if (status == NfcStatus.DISABLED) {
-                TextButton(onClick = onOpenSettings) { Text("Activer") }
+                TextButton(onClick = onOpenSettings) { Text("Enable") }
             }
         }
     }
@@ -394,7 +449,7 @@ private fun FavoriteCard(
                 overflow = TextOverflow.Ellipsis
             )
             IconButton(onClick = { onFavorite(item) }) {
-                Icon(Icons.Default.Star, contentDescription = "Retirer des favoris", tint = Color(0xFFFFB300))
+                Icon(Icons.Default.Star, contentDescription = "Remove from favorites", tint = Color(0xFFFFB300))
             }
             ItemMenu(item, onEdit, onDelete, onCopy, onShare, onOpen, onDuplicate)
         }
@@ -430,7 +485,7 @@ private fun LinkCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    item.lastUsedAt?.let(::formatDate) ?: "Jamais utilisé",
+                    item.lastUsedAt?.let(::formatDate) ?: "Never used",
                     color = MaterialTheme.colorScheme.outline,
                     style = MaterialTheme.typography.labelSmall
                 )
@@ -438,7 +493,7 @@ private fun LinkCard(
             IconButton(onClick = { onFavorite(item) }) {
                 Icon(
                     Icons.Default.Star,
-                    contentDescription = "Ajouter aux favoris",
+                    contentDescription = "Add to favorites",
                     tint = MaterialTheme.colorScheme.outline
                 )
             }
@@ -460,36 +515,36 @@ private fun ItemMenu(
     var expanded by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }) {
-            Icon(Icons.Default.MoreVert, contentDescription = "Plus d’actions")
+            Icon(Icons.Default.MoreVert, contentDescription = "More actions")
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
-                text = { Text("Modifier") },
+                text = { Text("Edit") },
                 leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
                 onClick = { expanded = false; onEdit(item) }
             )
             DropdownMenuItem(
-                text = { Text("Copier") },
+                text = { Text("Copy") },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_content_copy), contentDescription = null) },
                 onClick = { expanded = false; onCopy(item) }
             )
             DropdownMenuItem(
-                text = { Text("Partager") },
+                text = { Text("Share") },
                 leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
                 onClick = { expanded = false; onShare(item) }
             )
             DropdownMenuItem(
-                text = { Text("Ouvrir") },
+                text = { Text("Open") },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_open_in_new), contentDescription = null) },
                 onClick = { expanded = false; onOpen(item) }
             )
             DropdownMenuItem(
-                text = { Text("Dupliquer") },
+                text = { Text("Duplicate") },
                 leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
                 onClick = { expanded = false; onDuplicate(item) }
             )
             DropdownMenuItem(
-                text = { Text("Supprimer") },
+                text = { Text("Delete") },
                 leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
                 onClick = { expanded = false; onDelete(item) }
             )
@@ -524,7 +579,7 @@ private fun SwipeableLinkCard(
                 contentAlignment = Alignment.CenterEnd
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Supprimer", color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.SemiBold)
+                    Text("Delete", color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.width(8.dp))
                     Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer)
                 }
@@ -538,11 +593,11 @@ private fun SwipeableLinkCard(
 private fun EmptyHistory(searching: Boolean, modifier: Modifier = Modifier) {
     Card(modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
         Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(if (searching) "Aucun résultat" else "Aucun lien", style = MaterialTheme.typography.titleMedium)
+            Text(if (searching) "No results" else "No links yet", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(6.dp))
             Text(
-                if (searching) "Essayez un autre nom ou domaine."
-                else "Ajoutez une URL ou partagez une page depuis votre navigateur.",
+                if (searching) "Try another name or domain."
+                else "Add a URL or share a page from your browser.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
@@ -567,7 +622,7 @@ private fun EditorScreen(
     fun paste() {
         val extracted = onReadClipboard()?.let(UrlUtils::extract)
         if (extracted == null) {
-            error = "Aucune URL valide dans le presse-papiers."
+            error = "No valid URL found in the clipboard."
         } else {
             url = extracted
             if (title.isBlank()) title = UrlUtils.defaultTitle(extracted)
@@ -578,7 +633,7 @@ private fun EditorScreen(
     fun buildItem(): NfcItem? {
         val cleanUrl = UrlUtils.normalize(url)
         if (cleanUrl == null) {
-            error = "Adresse web invalide."
+            error = "Invalid web address."
             return null
         }
         return NfcItem(
@@ -594,10 +649,10 @@ private fun EditorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (original == null) "Nouvelle URL" else "Modifier") },
+                title = { Text(if (original == null) "New URL" else "Edit") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -616,7 +671,7 @@ private fun EditorScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 trailingIcon = {
                     IconButton(onClick = ::paste) {
-                        Icon(painterResource(R.drawable.ic_content_paste), contentDescription = "Coller")
+                        Icon(painterResource(R.drawable.ic_content_paste), contentDescription = "Paste")
                     }
                 },
                 isError = error != null,
@@ -627,7 +682,7 @@ private fun EditorScreen(
                 value = title,
                 onValueChange = { title = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Nom (optionnel)") },
+                label = { Text("Name (optional)") },
                 singleLine = true
             )
             Spacer(Modifier.height(2.dp))
@@ -637,12 +692,12 @@ private fun EditorScreen(
             ) {
                 Icon(Icons.Default.PlayArrow, contentDescription = null)
                 Spacer(Modifier.width(6.dp))
-                Text("Émuler")
+                Text("Emulate")
             }
             TextButton(
                 onClick = { buildItem()?.let(onSave) },
                 modifier = Modifier.fillMaxWidth().height(48.dp)
-            ) { Text("Enregistrer sans émuler") }
+            ) { Text("Save without emulating") }
         }
     }
 }
@@ -695,7 +750,7 @@ private fun EmulationScreen(
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_nfc_material),
-                        contentDescription = "Émulation NFC active",
+                        contentDescription = "NFC emulation active",
                         modifier = Modifier.fillMaxSize().padding(32.dp),
                         tint = if (available) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                     )
@@ -703,7 +758,7 @@ private fun EmulationScreen(
             }
             Spacer(Modifier.height(18.dp))
             Text(
-                if (readCount > 0) "Contenu lu" else "Approchez un autre téléphone",
+                if (readCount > 0) "Content read" else "Hold another phone nearby",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
@@ -712,13 +767,13 @@ private fun EmulationScreen(
             Text(
                 when (nfcStatus) {
                     NfcStatus.AVAILABLE -> when (readCount) {
-                        0 -> "Émulation active"
-                        1 -> "1 lecture"
-                        else -> "$readCount lectures"
+                        0 -> "Emulation active"
+                        1 -> "1 read"
+                        else -> "$readCount reads"
                     }
-                    NfcStatus.DISABLED -> "NFC désactivé"
-                    NfcStatus.HCE_UNSUPPORTED -> "HCE non compatible"
-                    NfcStatus.UNAVAILABLE -> "NFC indisponible"
+                    NfcStatus.DISABLED -> "NFC disabled"
+                    NfcStatus.HCE_UNSUPPORTED -> "HCE not supported"
+                    NfcStatus.UNAVAILABLE -> "NFC unavailable"
                 },
                 color = if (available) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                 fontWeight = FontWeight.SemiBold
@@ -742,13 +797,13 @@ private fun EmulationScreen(
                         )
                     }
                     IconButton(onClick = onCopy) {
-                        Icon(painterResource(R.drawable.ic_content_copy), contentDescription = "Copier l’URL")
+                        Icon(painterResource(R.drawable.ic_content_copy), contentDescription = "Copy URL")
                     }
                 }
             }
             Spacer(Modifier.height(14.dp))
             Text(
-                "Déverrouillez l’autre téléphone et rapprochez les zones NFC.",
+                "Unlock the other phone and bring the NFC areas close together.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center
@@ -756,14 +811,14 @@ private fun EmulationScreen(
             Spacer(Modifier.height(24.dp))
             if (nfcStatus == NfcStatus.DISABLED) {
                 OutlinedButton(onClick = onOpenNfcSettings, modifier = Modifier.fillMaxWidth().height(50.dp)) {
-                    Text("Activer le NFC")
+                    Text("Enable NFC")
                 }
                 Spacer(Modifier.height(10.dp))
             }
             Button(onClick = onStop, modifier = Modifier.fillMaxWidth().height(54.dp)) {
                 Icon(Icons.Default.Close, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Arrêter")
+                Text("Stop")
             }
         }
     }
@@ -787,14 +842,14 @@ private fun shareUrl(context: Context, url: String, onError: (String) -> Unit) {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, url)
         }
-        context.startActivity(Intent.createChooser(intent, "Partager l’URL"))
-    }.onFailure { onError("Aucune application disponible pour partager cette URL") }
+        context.startActivity(Intent.createChooser(intent, "Share URL"))
+    }.onFailure { onError("No app is available to share this URL") }
 }
 
 private fun openUrl(context: Context, url: String, onError: (String) -> Unit) {
     runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-        .onFailure { onError("Aucun navigateur disponible") }
+        .onFailure { onError("No browser is available") }
 }
 
-private fun formatDate(timestamp: Long): String = DateTimeFormatter.ofPattern("d MMM · HH:mm", Locale.FRENCH)
+private fun formatDate(timestamp: Long): String = DateTimeFormatter.ofPattern("d MMM · HH:mm", Locale.ENGLISH)
     .format(Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()))

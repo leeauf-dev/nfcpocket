@@ -13,7 +13,7 @@ The app is small and deliberately focused on one job. There are no accounts, ads
 
 Download the APK from the [Releases page](https://github.com/leeauf-dev/nfcpocket/releases). Android may ask you to allow installations from your browser or file manager.
 
-Development debug and signed release APKs are also available from successful [GitHub Actions runs](https://github.com/leeauf-dev/nfcpocket/actions/workflows/build-apk.yml) under the `nfcpocket-apk` artifact.
+Signed release APKs are also available from successful [GitHub Actions runs](https://github.com/leeauf-dev/nfcpocket/actions/workflows/build-apk.yml) under the `nfcpocket-apk` artifact. GitHub packages Actions artifacts as ZIP files.
 
 > Releases from v1.0.0 onward use the project signing key and the Android application ID `com.leeauf.pocketnfc`. The earlier v0.1.0 preview used a different application ID and must be removed separately.
 
@@ -22,6 +22,7 @@ Development debug and signed release APKs are also available from successful [Gi
 - Emulates a read-only NFC Forum Type 4 Tag through Android HCE
 - Shares `http://` and `https://` links as standard NDEF URI records
 - Opens directly in emulation mode from Android's Share menu
+- Detects web links in the clipboard and offers a dismissible one-tap paste shortcut
 - Pastes and normalizes web addresses, adding HTTPS when appropriate
 - Shows cached site favicons and provides search, copy, share, open, duplicate, and swipe-to-delete actions
 - Saves links locally with custom names, favorites, and last-used dates
