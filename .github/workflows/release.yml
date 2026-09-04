@@ -78,14 +78,13 @@ jobs:
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           VERSION_NAME: ${{ steps.version.outputs.name }}
           VERSION_CODE: ${{ steps.version.outputs.code }}
           TAG: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
-          for secret in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+          for secret in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_PASSWORD; do
             if [[ -z "${!secret}" ]]; then
               echo "Required signing secret $secret is missing." >&2
               exit 1
@@ -97,7 +96,7 @@ jobs:
             -PreleaseVersionCode="$VERSION_CODE" \
             -PreleaseStoreFile="$RUNNER_TEMP/nfcpocket-release.p12" \
             -PreleaseStorePassword="$ANDROID_KEYSTORE_PASSWORD" \
-            -PreleaseKeyAlias="$ANDROID_KEY_ALIAS" \
+            -PreleaseKeyAlias="nfcpocket" \
             -PreleaseKeyPassword="$ANDROID_KEY_PASSWORD"
           mkdir -p dist
           cp app/build/outputs/apk/release/app-release.apk "dist/NFC-Pocket-$TAG.apk"

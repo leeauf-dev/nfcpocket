@@ -79,11 +79,10 @@ The repository uses Kotlin, Gradle Kotlin DSL, Jetpack Compose, and Material 3. 
 GitHub → Actions → Build APK → Artifacts → nfcpocket-apk
 ```
 
-Releases are created manually from **Actions → Publish release → Run workflow**. Enter a semantic version such as `1.1.0` and choose whether it is a pre-release. The workflow builds a signed APK, verifies its signature, creates the matching tag, and attaches the APK plus a SHA-256 checksum to the GitHub Release. It requires these repository secrets:
+Releases are created manually from **Actions → Publish release → Run workflow**. Enter a semantic version such as `1.1.0` and choose whether it is a pre-release. The workflow builds a signed APK, verifies its signature, creates the matching tag, and attaches the APK plus a SHA-256 checksum to the GitHub Release. It uses the fixed, non-secret key alias `nfcpocket` and requires these repository secrets:
 
 - `ANDROID_KEYSTORE_BASE64`
 - `ANDROID_KEYSTORE_PASSWORD`
-- `ANDROID_KEY_ALIAS`
 - `ANDROID_KEY_PASSWORD`
 
 The workflow fails safely if any signing secret is missing; it never publishes a debug-signed release.
