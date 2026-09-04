@@ -1,0 +1,87 @@
+name: Publish release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android API 36
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Build release APK
+        id: apk
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          mkdir -p dist
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" && -n "$ANDROID_KEYSTORE_PASSWORD" && -n "$ANDROID_KEY_ALIAS" && -n "$ANDROID_KEY_PASSWORD" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/nfcpocket-release.p12"
+            ./gradlew assembleRelease \
+              -PreleaseStoreFile="$RUNNER_TEMP/nfcpocket-release.p12" \
+              -PreleaseStorePassword="$ANDROID_KEYSTORE_PASSWORD" \
+              -PreleaseKeyAlias="$ANDROID_KEY_ALIAS" \
+              -PreleaseKeyPassword="$ANDROID_KEY_PASSWORD"
+            cp app/build/outputs/apk/release/app-release.apk "dist/NFC-Pocket-${GITHUB_REF_NAME}.apk"
+            echo "preview=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Signing secrets are incomplete; publishing a debug-signed preview APK."
+            ./gradlew assembleDebug
+            cp app/build/outputs/apk/debug/app-debug.apk "dist/NFC-Pocket-${GITHUB_REF_NAME}-preview.apk"
+            echo "preview=true" >> "$GITHUB_OUTPUT"
+          fi
+          cd dist
+          sha256sum *.apk > SHA256SUMS.txt
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: nfcpocket-${{ github.ref_name }}
+          path: dist/
+          if-no-files-found: error
+
+      - name: Create GitHub pre-release
+        if: steps.apk.outputs.preview == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME" dist/*
+          --verify-tag --generate-notes --prerelease
+          --title "NFC Pocket $GITHUB_REF_NAME (preview)"
+          --notes "This preview is debug-signed. See the README before installing future updates."
+
+      - name: Create GitHub release
+        if: steps.apk.outputs.preview == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME" dist/*
+          --verify-tag --generate-notes
+          --title "NFC Pocket $GITHUB_REF_NAME"

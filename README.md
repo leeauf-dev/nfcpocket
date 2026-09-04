@@ -1,56 +1,100 @@
 # NFC Pocket
 
-NFC Pocket est une petite application Android native qui transforme temporairement un téléphone compatible en tag NFC NDEF. Le contenu est lu par un autre téléphone directement via NFC, sans compte, serveur, télémétrie ou connexion réseau.
+[![Android build](https://github.com/leeauf-dev/nfcpocket/actions/workflows/build-apk.yml/badge.svg)](https://github.com/leeauf-dev/nfcpocket/actions/workflows/build-apk.yml)
+[![Latest release](https://img.shields.io/github/v/release/leeauf-dev/nfcpocket?include_prereleases)](https://github.com/leeauf-dev/nfcpocket/releases)
+[![License](https://img.shields.io/github/license/leeauf-dev/nfcpocket)](LICENSE)
+[![Android 10+](https://img.shields.io/badge/Android-10%2B-3DDC84?logo=android&logoColor=white)](https://developer.android.com/about/versions/10)
 
-## Fonctionnement NFC
+NFC Pocket turns an Android phone into a temporary NFC tag for sharing web links. Pick a saved URL, hold another phone nearby, and it receives a standard NDEF URI record. The receiving phone does not need NFC Pocket installed.
 
-L’application utilise Android Host Card Emulation (`HostApduService`) et implémente directement un tag NFC Forum Type 4 en lecture seule :
+The app is small, offline, and deliberately focused on one job. There are no accounts, ads, analytics, network calls, or Internet permission.
 
-- AID NDEF standard : `D2760000850101` ;
-- sélection de l’application NDEF ;
-- sélection et lecture du Capability Container `E103` ;
-- sélection et lecture du fichier NDEF `E104` ;
-- commandes `SELECT` et `READ BINARY`, avec réponses découpées selon le `Le` demandé ;
-- contenu NDEF dynamique conservé localement jusqu’au bouton **Arrêter**.
+## Download
 
-L’implémentation est autonome et n’ajoute aucune bibliothèque NFC externe. Les projets Apache-2.0 [LuigiVampa92/ndef-emulator](https://github.com/LuigiVampa92/ndef-emulator) et [MichaelsPlayground/NfcHceNdefEmulator](https://github.com/MichaelsPlayground/NfcHceNdefEmulator) ont été étudiés comme références d’interopérabilité, mais aucun de leur code n’est embarqué.
+Download the APK from the [Releases page](https://github.com/leeauf-dev/nfcpocket/releases). Android may ask you to allow installations from your browser or file manager.
 
-## Contenu pris en charge
+Development APKs are also available from successful [GitHub Actions runs](https://github.com/leeauf-dev/nfcpocket/actions/workflows/build-apk.yml) under the `nfcpocket-apk` artifact.
 
-NFC Pocket est volontairement centré sur un seul usage : les URL `http://` et `https://`, encodées comme URI NDEF. Chaque lien possède un nom court personnalisable pour le retrouver rapidement.
+> Release previews are debug-signed until a project signing key is configured. A later signing-key change may require uninstalling the previous preview before installing an update.
 
-L’icône NFC utilisée dans l’application et son icône adaptative provient de [Google Material Design Icons](https://github.com/google/material-design-icons/tree/master/src/device/nfc/materialicons), sous licence Apache-2.0. Elle est conservée en vector drawable sur fond transparent ; l’icône adaptative ajoute uniquement un fond vert uni.
+## Features
 
-## Données et interface
+- Emulates a read-only NFC Forum Type 4 Tag through Android HCE
+- Shares `http://` and `https://` links as standard NDEF URI records
+- Opens directly in emulation mode from Android's Share menu
+- Saves links locally with custom names, favorites, and last-used dates
+- Keeps up to 100 non-favorite links; favorites are never removed automatically
+- Material 3 interface with system light/dark theme and dynamic colors
+- Clear NFC/HCE status, direct NFC settings shortcut, and read feedback
+- No backend, account, telemetry, or runtime network access
 
-Les éléments, favoris et dates d’utilisation sont stockés uniquement sur l’appareil avec DataStore Preferences et un JSON compact. Les 100 éléments non favoris les plus récents sont conservés ; les favoris ne sont jamais supprimés automatiquement. Le thème Compose Material 3 suit le mode clair/sombre du système et utilise les couleurs dynamiques à partir d’Android 12.
+## Requirements
 
-## Cible de partage Android
+The sending phone needs:
 
-NFC Pocket accepte `ACTION_SEND` pour `text/plain` et `text/uri-list`. La première URL `http://` ou `https://` du contenu partagé est détectée ; sans URL valide, l’application affiche un message et n’émule rien. Depuis Chrome : **Partager → NFC Pocket** ouvre directement l’écran d’émulation et ajoute le lien à l’historique.
+- Android 10 or newer
+- NFC hardware
+- Android Host Card Emulation (`FEATURE_NFC_HOST_CARD_EMULATION`)
+- NFC enabled
 
-## Build exclusivement avec GitHub Actions
+NFC Pocket can be installed on unsupported devices so it can explain what is missing, but those devices cannot emulate a tag.
 
-Aucune toolchain Android locale n’est nécessaire. Le workflow `.github/workflows/build-apk.yml` se lance à chaque push sur `main` ou manuellement avec **Run workflow**. Il installe Java 17 et le SDK Android sur le runner Ubuntu, puis produit un APK debug installable.
+Android phones with NFC can usually receive the link. iPhone XS and newer can normally detect a compatible NDEF URL in the background while the display is on. NFC behavior still varies by device, OS version, antenna placement, lock state, and vendor firmware.
 
-Pour télécharger l’APK :
+## Usage
 
-1. ouvrir l’onglet **Actions** du dépôt ;
-2. ouvrir le dernier workflow **Build debug APK** réussi ;
-3. descendre jusqu’à **Artifacts** ;
-4. télécharger **nfcpocket-apk** puis extraire `app-debug.apk`.
+1. Add a URL, or share a page from a browser to **NFC Pocket**.
+2. Tap **Emulate**.
+3. Keep NFC Pocket open and place the receiving phone near the sender's NFC antenna.
+4. Tap the notification shown by the receiving phone.
+5. Press **Stop** when finished.
 
-## Compatibilité et limitations
+The NFC antenna is often near the top or around the camera module. Moving the phones slowly is more reliable than tapping them together.
 
-- Android 10 minimum (`minSdk 29`), cible Android 16/API 36 ;
-- le téléphone émetteur doit exposer `FEATURE_NFC_HOST_CARD_EMULATION` et avoir le NFC activé ;
-- HCE émule une carte ISO-DEP/Type 4, pas la modulation physique de tous les types de tags NFC ;
-- le tag est en lecture seule et ne peut pas être réécrit par le lecteur ;
-- le comportement de détection NDEF, l’activité écran verrouillé et le routage de l’AID standard peuvent varier selon Android, HyperOS et les restrictions constructeur ;
-- une autre application HCE déclarant le même AID peut provoquer un conflit de routage ; NFC Pocket se déclare service préféré pendant que son écran d’émulation est au premier plan ;
-- certains téléphones ne proposent pas automatiquement d’ouvrir l’URL, même si le message NDEF est correctement lu ;
-- la proximité téléphone-à-téléphone dépend fortement de la position des deux antennes NFC et les deux appareils ne peuvent pas simultanément agir comme lecteurs.
+## How it works
 
-## Confidentialité
+`NdefHostApduService` implements the NFC Forum Type 4 Tag exchange directly:
 
-L’application demande uniquement la permission NFC. Elle ne déclare pas la permission Internet et n’envoie aucune donnée hors du téléphone.
+- NDEF application AID: `D2760000850101`
+- Capability Container file: `E103`
+- NDEF file: `E104`
+- Supported commands: application/file `SELECT` and chunked `READ BINARY`
+- NDEF file access: read-only
+
+The active NDEF message is replaced whenever a link is selected. Android routes APDUs to the service while NFC Pocket is the preferred foreground HCE service. No external NFC library is included.
+
+HCE does not reproduce a physical tag UID and cannot emulate every NFC technology. Other HCE apps using the standard NDEF AID may also cause a routing conflict. Some manufacturers restrict HCE or background behavior more aggressively than stock Android.
+
+## Privacy
+
+Saved links remain in Android app storage. Backups are disabled, and the manifest does not request `INTERNET`. The only requested permission is NFC.
+
+## Build
+
+The repository uses Kotlin, Gradle Kotlin DSL, Jetpack Compose, and Material 3. Builds run on GitHub Actions with Java 17 and Android API 36.
+
+```text
+GitHub → Actions → Build debug APK → Artifacts → nfcpocket-apk
+```
+
+The release workflow runs for tags matching `v*` and attaches the APK plus a SHA-256 checksum to a GitHub Release. Maintainers can configure production signing with these repository secrets:
+
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+
+Without all four secrets, the workflow publishes a clearly marked debug-signed preview APK.
+
+## Contributing
+
+Bug reports and focused pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a change. Security issues should follow [SECURITY.md](SECURITY.md).
+
+## Credits
+
+- The HCE design was informed by [LuigiVampa92/ndef-emulator](https://github.com/LuigiVampa92/ndef-emulator) and [MichaelsPlayground/NfcHceNdefEmulator](https://github.com/MichaelsPlayground/NfcHceNdefEmulator), both available under Apache-2.0. NFC Pocket contains its own implementation rather than bundling either library.
+- The NFC glyph comes from [Google Material Design Icons](https://github.com/google/material-design-icons/tree/master/src/device/nfc/materialicons), licensed under Apache-2.0. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## License
+
+NFC Pocket is licensed under the [Apache License 2.0](LICENSE).
