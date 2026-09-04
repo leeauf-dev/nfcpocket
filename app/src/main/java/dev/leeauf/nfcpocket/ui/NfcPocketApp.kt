@@ -1,7 +1,6 @@
 package dev.leeauf.nfcpocket.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -66,10 +65,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
@@ -80,6 +77,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.leeauf.nfcpocket.model.NfcItem
 import dev.leeauf.nfcpocket.model.NfcPayload
 import dev.leeauf.nfcpocket.model.NfcType
+import dev.leeauf.nfcpocket.R
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
@@ -199,7 +197,7 @@ private fun HomeScreen(
             if (favorites.isNotEmpty()) {
                 item { SectionTitle("Favoris") }
                 items(favorites, key = { it.id }) { item ->
-                    ItemCard(item, onEdit, onDelete, onFavorite, onEmulate)
+                    ItemCard(item, false, onEdit, onDelete, onFavorite, onEmulate)
                 }
             }
             item { SectionTitle("Récents") }
@@ -218,7 +216,7 @@ private fun HomeScreen(
                 }
             } else {
                 items(recent, key = { it.id }) { item ->
-                    ItemCard(item, onEdit, onDelete, onFavorite, onEmulate)
+                    ItemCard(item, true, onEdit, onDelete, onFavorite, onEmulate)
                 }
             }
         }
@@ -283,6 +281,7 @@ private fun SectionTitle(text: String) {
 @Composable
 private fun ItemCard(
     item: NfcItem,
+    showPreview: Boolean,
     onEdit: (NfcItem) -> Unit,
     onDelete: (NfcItem) -> Unit,
     onFavorite: (NfcItem) -> Unit,
@@ -303,12 +302,14 @@ private fun ItemCard(
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(item.title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(
-                        item.preview(),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    if (showPreview) {
+                        Text(
+                            item.preview(),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
                 IconButton(onClick = { onFavorite(item) }) {
                     Icon(
@@ -518,9 +519,11 @@ private fun EmulationScreen(item: NfcItem, nfcStatus: NfcStatus, onStop: () -> U
                 color = if (nfcStatus == NfcStatus.AVAILABLE) MaterialTheme.colorScheme.primaryContainer
                 else MaterialTheme.colorScheme.errorContainer
             ) {
-                NfcMark(
-                    Modifier.fillMaxSize().padding(42.dp),
-                    if (nfcStatus == NfcStatus.AVAILABLE) MaterialTheme.colorScheme.primary
+                Icon(
+                    painter = painterResource(R.drawable.ic_nfc_material),
+                    contentDescription = "NFC",
+                    modifier = Modifier.fillMaxSize().padding(42.dp),
+                    tint = if (nfcStatus == NfcStatus.AVAILABLE) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.error
                 )
             }
@@ -551,17 +554,6 @@ private fun EmulationScreen(item: NfcItem, nfcStatus: NfcStatus, onStop: () -> U
                 Text("Arrêter")
             }
         }
-    }
-}
-
-@Composable
-private fun NfcMark(modifier: Modifier, color: Color) {
-    Canvas(modifier) {
-        val stroke = size.minDimension * 0.08f
-        drawLine(color, Offset(size.width * .22f, size.height * .18f), Offset(size.width * .22f, size.height * .82f), stroke, StrokeCap.Round)
-        drawArc(color, -72f, 144f, false, topLeft = Offset(size.width * .13f, size.height * .28f), size = androidx.compose.ui.geometry.Size(size.width * .38f, size.height * .44f), style = Stroke(stroke, cap = StrokeCap.Round))
-        drawArc(color, -67f, 134f, false, topLeft = Offset(size.width * .17f, size.height * .12f), size = androidx.compose.ui.geometry.Size(size.width * .62f, size.height * .76f), style = Stroke(stroke, cap = StrokeCap.Round))
-        drawArc(color, -64f, 128f, false, topLeft = Offset(size.width * .20f, size.height * -.02f), size = androidx.compose.ui.geometry.Size(size.width * .84f, size.height * 1.04f), style = Stroke(stroke, cap = StrokeCap.Round))
     }
 }
 

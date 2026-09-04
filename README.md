@@ -27,6 +27,8 @@ L’implémentation est autonome et n’ajoute aucune bibliothèque NFC externe.
 
 Les modèles de payload sont séparés de l’encodage NDEF afin de faciliter l’ajout de nouveaux types.
 
+L’icône NFC utilisée dans l’application et son icône adaptative provient de [Google Material Design Icons](https://github.com/google/material-design-icons/tree/master/src/device/nfc/materialicons), sous licence Apache-2.0. Elle est conservée en vector drawable sur fond transparent ; l’icône adaptative ajoute uniquement un fond vert uni.
+
 ## Données et interface
 
 Les éléments, favoris et dates d’utilisation sont stockés uniquement sur l’appareil avec DataStore Preferences et un JSON compact. Les 100 éléments non favoris les plus récents sont conservés ; les favoris ne sont jamais supprimés automatiquement. Le thème Compose Material 3 suit le mode clair/sombre du système et utilise les couleurs dynamiques à partir d’Android 12.
