@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -256,26 +255,25 @@ private fun HomeScreen(
                 }
             }
             if (favorites.isNotEmpty()) {
-                item { SectionTitle("Favoris", Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) }
                 item {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        items(favorites, key = { it.id }) { item ->
-                            FavoriteCard(
-                                item = item,
-                                onEdit = onEdit,
-                                onDelete = { pendingDelete = it },
-                                onFavorite = onFavorite,
-                                onEmulate = onEmulate,
-                                onCopy = onCopy,
-                                onShare = onShare,
-                                onOpen = onOpen,
-                                onDuplicate = onDuplicate
-                            )
-                        }
-                    }
+                    SectionTitle(
+                        "Favoris",
+                        Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
+                    )
+                }
+                items(favorites, key = { "favorite-${it.id}" }) { item ->
+                    FavoriteCard(
+                        item = item,
+                        onEdit = onEdit,
+                        onDelete = { pendingDelete = it },
+                        onFavorite = onFavorite,
+                        onEmulate = onEmulate,
+                        onCopy = onCopy,
+                        onShare = onShare,
+                        onOpen = onOpen,
+                        onDuplicate = onDuplicate,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
                 }
             }
             item { SectionTitle("Historique", Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) }
@@ -374,19 +372,24 @@ private fun FavoriteCard(
     onCopy: (NfcItem) -> Unit,
     onShare: (NfcItem) -> Unit,
     onOpen: (NfcItem) -> Unit,
-    onDuplicate: (NfcItem) -> Unit
+    onDuplicate: (NfcItem) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = Modifier.width(250.dp).clickable { onEmulate(item) },
+        modifier = modifier.fillMaxWidth().clickable { onEmulate(item) },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
     ) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Favicon(item.url, size = 42.dp)
-            Spacer(Modifier.width(11.dp))
+        Row(
+            modifier = Modifier.padding(start = 14.dp, top = 10.dp, end = 4.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Favicon(item.url, size = 40.dp)
+            Spacer(Modifier.width(12.dp))
             Text(
                 item.title,
                 modifier = Modifier.weight(1f),
                 fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.bodyLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
