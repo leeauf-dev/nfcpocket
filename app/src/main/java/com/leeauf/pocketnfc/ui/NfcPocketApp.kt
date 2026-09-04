@@ -769,20 +769,10 @@ private fun EmulationScreen(
                         tint = if (available) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                     )
                 }
-                AnimatedVisibility(
+                ReadConfirmation(
                     visible = showReadConfirmation,
-                    enter = fadeIn(tween(120)),
-                    exit = fadeOut(tween(220))
-                ) {
-                    Surface(
-                        modifier = Modifier.size(82.dp),
-                        shape = CircleShape,
-                        color = Color(0xFF16865A),
-                        shadowElevation = 8.dp
-                    ) {
-                        DrawnCheckMark(checkProgress.value)
-                    }
-                }
+                    progress = checkProgress.value
+                )
             }
             Spacer(Modifier.height(18.dp))
             Text(
@@ -848,6 +838,24 @@ private fun EmulationScreen(
                 Spacer(Modifier.width(8.dp))
                 Text("Stop")
             }
+        }
+    }
+}
+
+@Composable
+private fun ReadConfirmation(visible: Boolean, progress: Float) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(tween(120)),
+        exit = fadeOut(tween(220))
+    ) {
+        Surface(
+            modifier = Modifier.size(82.dp),
+            shape = CircleShape,
+            color = Color(0xFF16865A),
+            shadowElevation = 8.dp
+        ) {
+            DrawnCheckMark(progress)
         }
     }
 }
