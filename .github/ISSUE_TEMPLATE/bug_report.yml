@@ -1,0 +1,40 @@
+name: Bug report
+description: Report a reproducible problem with NFC Pocket
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to report a problem.
+  - type: input
+    id: sender
+    attributes:
+      label: Sending device
+      description: Model, Android version, and ROM (for example HyperOS or One UI)
+    validations:
+      required: true
+  - type: input
+    id: receiver
+    attributes:
+      label: Receiving device
+      description: Model and Android/iOS version
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: Explain what you did and what happened.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Do not include private URLs or sensitive APDU data.
