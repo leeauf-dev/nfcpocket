@@ -107,7 +107,8 @@ jobs:
       - name: Verify APK signature
         env:
           TAG: ${{ steps.version.outputs.tag }}
-        run: "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "dist/NFC-Pocket-$TAG.apk"
+        run: |
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "dist/NFC-Pocket-$TAG.apk"
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v7
